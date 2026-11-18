@@ -39,6 +39,9 @@ def _explode(name: str) -> list[float]:
         "pinion": [0, 0, -14], "shaft": [0, 0, -60], "sleeve": [14, 0, -60],
         "crank_R": [48, 0, 0], "crank_L": [-48, 0, 0], "clip_R": [118, 0, 0], "clip_L": [-118, 0, 0],
         "sc_base": [0, 0, 104],
+        # 改造で追加した部品
+        "cowl_F": [0, 30, -20], "cowl_R": [0, -30, -20],
+        "spur_R": [40, 0, -30], "spur_L": [-40, 0, -30], "cover_R": [64, 0, 0], "cover_L": [-64, 0, 0],
     }
     if name.startswith("sc_") and name not in table:
         return [0.0, 0.0, 122.0]

@@ -1,0 +1,127 @@
+{
+ "self_test": {
+  "ok": true,
+  "shifted_hits": 2,
+  "lowered_gear_hits": 2
+ },
+ "collisions": {
+  "ok": true,
+  "poses": 180,
+  "hits": []
+ },
+ "gaps": {
+  "ok": true,
+  "min_gap_mm": 0.4999999999999929,
+  "required_mm": 0.25,
+  "closest": [
+   {
+    "a": "cover_R",
+    "b": "RR_j",
+    "gap_mm": 0.4999999999999929,
+    "crank_deg": 0.0
+   },
+   {
+    "a": "cover_L",
+    "b": "LF_j",
+    "gap_mm": 0.4999999999999929,
+    "crank_deg": 0.0
+   }
+  ]
+ },
+ "keys": {
+  "ok": true,
+  "clip_overlap_mm": 1.9999999999999996,
+  "radial_fit_mm": 0.1,
+  "joints": [
+   {
+    "joint": "クランクのピン",
+    "layers": 4,
+    "axial_play_mm": 0.7000000000000001
+   },
+   {
+    "joint": "B の突起",
+    "layers": 2,
+    "axial_play_mm": 0.4000000000000001
+   },
+   {
+    "joint": "D の突起",
+    "layers": 1,
+    "axial_play_mm": 0.2500000000000001
+   },
+   {
+    "joint": "E の突起",
+    "layers": 1,
+    "axial_play_mm": 0.2500000000000001
+   },
+   {
+    "joint": "G の突起",
+    "layers": 1,
+    "axial_play_mm": 0.2500000000000001
+   },
+   {
+    "joint": "F の突起",
+    "layers": 2,
+    "axial_play_mm": 0.4000000000000001
+   }
+  ],
+  "max_axial_play_mm": 0.7000000000000001
+ },
+ "head_lock": {
+  "ok": true,
+  "yaw_play_deg": [
+   0.9191894531249999,
+   0.9191894531249999
+  ],
+  "nod_free_range_deg": [
+   -45,
+   45
+  ],
+  "pad_force_at_stall_N": 3.4335,
+  "note": "ピッチ軸の位置(机面から 43 mm、ヨー軸の真上)は図面からの推定。うなずき範囲はこの仮定での値"
+ },
+ "table_retention": {
+  "ok": true,
+  "free_at_0_3mm": true,
+  "blocked_at_1_0mm": true
+ },
+ "gait": {
+  "ok": true,
+  "mass_total_g": 356.77318916774186,
+  "mass_walker_g": 169.5731891677419,
+  "cg_body_mm": [
+   0.17816995345870154,
+   1.4440503900878745,
+   43.71619568145667
+  ],
+  "cg_height_mm": [
+   76.84255209119941,
+   77.6964853929423
+  ],
+  "pitch_deg": [
+   -2.789050795231242,
+   2.816437947649868
+  ],
+  "roll_deg": [
+   -1.2317641589949877,
+   1.241348958101213
+  ],
+  "tilt_max_deg": 3.0782715249141117,
+  "tilt_limit_deg": 8.0,
+  "static_tip_angle_deg": 36.632559530223176,
+  "poses_without_rest": 0,
+  "min_support_feet": 3,
+  "advance_per_rev_mm": 15.650936291181297,
+  "speed_mm_s_at_40rpm": 10.433957527454199,
+  "torque_peak_Nm": 0.00279950013531173,
+  "servo_rated_Nm": 0.063765,
+  "servo_stall_Nm": 0.185409,
+  "foot_lift_mm": 5.400354693065921,
+  "assumptions": [
+   "スタックチャンの重心はヨー軸から前へ 3.0 mm、土台底面から 38.0 mm と仮定",
+   "印刷部品の質量は体積 × PLA 密度 × 充填率 0.55 の概算",
+   "接地姿勢は静的なつり合い。足は床で滑らないと仮定(前進量は接地足の移動量から算出)",
+   "トルクは重心を持ち上げる仕事だけの準静的な値で、ジョイントと歯車の摩擦は含まない"
+  ]
+ },
+ "ok": true
+}

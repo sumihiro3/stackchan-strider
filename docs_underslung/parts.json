@@ -1,0 +1,465 @@
+{
+ "parts": [
+  {
+   "key": "side_plate",
+   "label": "側板",
+   "count": 2,
+   "file": "side_plate_x2.stl",
+   "size_mm": [
+    79.0,
+    66.0,
+    26.0
+   ],
+   "volume_cm3": 21.61,
+   "orientation": "内面を下、スタッドを上",
+   "overhang_mm2": 8.8,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 3236
+  },
+  {
+   "key": "deck",
+   "label": "デッキ",
+   "count": 1,
+   "file": "deck_x1.stl",
+   "size_mm": [
+    106.8,
+    74.0,
+    16.5
+   ],
+   "volume_cm3": 18.06,
+   "orientation": "そのまま(ボスを上)",
+   "overhang_mm2": 0.0,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 1568
+  },
+  {
+   "key": "yoke",
+   "label": "ヨーク(カラー+イヤーパッド)",
+   "count": 1,
+   "file": "yoke_x1.stl",
+   "size_mm": [
+    106.8,
+    89.4,
+    57.6
+   ],
+   "volume_cm3": 20.64,
+   "orientation": "カラーを下、イヤーパッドを上",
+   "overhang_mm2": 43.7,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 4504
+  },
+  {
+   "key": "cowl",
+   "label": "カウル(前後の外装)",
+   "count": 2,
+   "file": "cowl_x2.stl",
+   "size_mm": [
+    60.0,
+    38.0,
+    30.5
+   ],
+   "volume_cm3": 10.14,
+   "orientation": "鼻先を下、舌を上",
+   "overhang_mm2": 174.0,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 252
+  },
+  {
+   "key": "gear_table",
+   "label": "ターンテーブル歯車",
+   "count": 1,
+   "file": "gear_table_x1.stl",
+   "size_mm": [
+    82.0,
+    82.0,
+    20.5
+   ],
+   "volume_cm3": 21.56,
+   "orientation": "円板を下、歯と軸を上",
+   "overhang_mm2": 0.0,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 4440
+  },
+  {
+   "key": "socket_frame",
+   "label": "ソケット枠",
+   "count": 1,
+   "file": "socket_frame_x1.stl",
+   "size_mm": [
+    82.0,
+    82.0,
+    7.8
+   ],
+   "volume_cm3": 14.87,
+   "orientation": "上面を下、ツメを上",
+   "overhang_mm2": 0.0,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 2792
+  },
+  {
+   "key": "pinion",
+   "label": "ピニオン",
+   "count": 1,
+   "file": "pinion_x1.stl",
+   "size_mm": [
+    42.47,
+    42.47,
+    73.0
+   ],
+   "volume_cm3": 10.47,
+   "orientation": "背面を下、歯と筒を上",
+   "overhang_mm2": 0.0,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 4294
+  },
+  {
+   "key": "shaft",
+   "label": "六角シャフト",
+   "count": 1,
+   "file": "shaft_x1.stl",
+   "size_mm": [
+    112.8,
+    9.01,
+    7.8
+   ],
+   "volume_cm3": 5.94,
+   "orientation": "六角の平らな面を下にして寝かせる",
+   "overhang_mm2": 0.0,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 20
+  },
+  {
+   "key": "sleeve",
+   "label": "スリーブ",
+   "count": 1,
+   "file": "sleeve_x1.stl",
+   "size_mm": [
+    18.0,
+    18.0,
+    28.4
+   ],
+   "volume_cm3": 2.13,
+   "orientation": "立てる",
+   "overhang_mm2": 0.0,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 908
+  },
+  {
+   "key": "crank",
+   "label": "クランク歯車",
+   "count": 2,
+   "file": "crank_x2.stl",
+   "size_mm": [
+    44.63,
+    44.79,
+    23.95
+   ],
+   "volume_cm3": 8.8,
+   "orientation": "円板を下、ピンを上",
+   "overhang_mm2": 82.9,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 4702
+  },
+  {
+   "key": "spur",
+   "label": "シャフトの平歯車",
+   "count": 2,
+   "file": "spur_x2.stl",
+   "size_mm": [
+    44.79,
+    44.63,
+    6.0
+   ],
+   "volume_cm3": 7.72,
+   "orientation": "内面を下、合わせ印を上",
+   "overhang_mm2": 0.0,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 3720
+  },
+  {
+   "key": "cover",
+   "label": "歯車カバー",
+   "count": 2,
+   "file": "cover_x2.stl",
+   "size_mm": [
+    73.0,
+    89.2,
+    5.5
+   ],
+   "volume_cm3": 7.95,
+   "orientation": "内面を下、座を上",
+   "overhang_mm2": 0.0,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 1884
+  },
+  {
+   "key": "clip",
+   "label": "Cクリップ",
+   "count": 22,
+   "file": "clip_x22.stl",
+   "size_mm": [
+    8.98,
+    9.2,
+    1.0
+   ],
+   "volume_cm3": 0.05,
+   "orientation": "寝かせる",
+   "overhang_mm2": 0.0,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 476
+  },
+  {
+   "key": "link_j",
+   "label": "リンク1(j: C–D)",
+   "count": 4,
+   "file": "link_j_x4.stl",
+   "size_mm": [
+    47.5,
+    10.0,
+    8.95
+   ],
+   "volume_cm3": 1.0,
+   "orientation": "スタッドを上",
+   "overhang_mm2": 4.4,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 1862
+  },
+  {
+   "key": "link_k",
+   "label": "リンク2(k: C–F)",
+   "count": 4,
+   "file": "link_k_x4.stl",
+   "size_mm": [
+    56.42,
+    10.0,
+    3.0
+   ],
+   "volume_cm3": 0.99,
+   "orientation": "寝かせる",
+   "overhang_mm2": 0.0,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 1422
+  },
+  {
+   "key": "link_c",
+   "label": "リンク3(c: B–F)",
+   "count": 4,
+   "file": "link_c_x4.stl",
+   "size_mm": [
+    39.48,
+    10.0,
+    12.1
+   ],
+   "volume_cm3": 0.91,
+   "orientation": "スタッドを上",
+   "overhang_mm2": 4.4,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 1972
+  },
+  {
+   "key": "link_f",
+   "label": "リンク4(f: E–G)",
+   "count": 4,
+   "file": "link_f_x4.stl",
+   "size_mm": [
+    39.55,
+    10.0,
+    8.95
+   ],
+   "volume_cm3": 1.02,
+   "orientation": "スタッドを上",
+   "overhang_mm2": 8.8,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 2426
+  },
+  {
+   "key": "tri_upper",
+   "label": "上三角",
+   "count": 4,
+   "file": "tri_upper_x4.stl",
+   "size_mm": [
+    41.12,
+    40.01,
+    3.0
+   ],
+   "volume_cm3": 2.84,
+   "orientation": "寝かせる",
+   "overhang_mm2": 0.0,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 1648
+  },
+  {
+   "key": "tri_lower",
+   "label": "下三角(足)",
+   "count": 4,
+   "file": "tri_lower_x4.stl",
+   "size_mm": [
+    42.83,
+    45.79,
+    11.0
+   ],
+   "volume_cm3": 3.61,
+   "orientation": "足先の幅広部を上",
+   "overhang_mm2": 0.0,
+   "bodies": 1,
+   "fits_bed": true,
+   "triangles": 1636
+  }
+ ],
+ "total_printed_parts": 63,
+ "unique_stl": 19,
+ "total_volume_cm3": 248.7,
+ "purchased_parts": 0,
+ "envelope_mm": {
+  "width": 149.3,
+  "length": 147.3,
+  "height": 131.4
+ },
+ "ok": true,
+ "plates": [
+  {
+   "file": "stackchan_strider_generated.3mf",
+   "plate": 1,
+   "name": "Frame 1 #2d3340",
+   "color": "chassis",
+   "hex": "#2d3340",
+   "parts": 4,
+   "contents": [
+    [
+     "Side plate",
+     2
+    ],
+    [
+     "Gear cover",
+     2
+    ]
+   ]
+  },
+  {
+   "file": "stackchan_strider_generated.3mf",
+   "plate": 2,
+   "name": "Frame 2 #2d3340",
+   "color": "chassis",
+   "hex": "#2d3340",
+   "parts": 2,
+   "contents": [
+    [
+     "Deck",
+     1
+    ],
+    [
+     "Socket frame",
+     1
+    ]
+   ]
+  },
+  {
+   "file": "stackchan_strider_generated.3mf",
+   "plate": 3,
+   "name": "Accent 1 #e53a2f",
+   "color": "accent",
+   "hex": "#e53a2f",
+   "parts": 13,
+   "contents": [
+    [
+     "Lower triangle (foot)",
+     4
+    ],
+    [
+     "Upper triangle",
+     4
+    ],
+    [
+     "Shaft spur gear",
+     2
+    ],
+    [
+     "Crank gear",
+     2
+    ],
+    [
+     "Pinion",
+     1
+    ]
+   ]
+  },
+  {
+   "file": "stackchan_strider_generated.3mf",
+   "plate": 4,
+   "name": "Accent 2 #e53a2f",
+   "color": "accent",
+   "hex": "#e53a2f",
+   "parts": 4,
+   "contents": [
+    [
+     "Yoke (collar + ear pads)",
+     1
+    ],
+    [
+     "Cowl (front / rear)",
+     2
+    ],
+    [
+     "Turntable gear",
+     1
+    ]
+   ]
+  },
+  {
+   "file": "stackchan_strider_generated.3mf",
+   "plate": 5,
+   "name": "Links #d6d9dc",
+   "color": "link",
+   "hex": "#d6d9dc",
+   "parts": 40,
+   "contents": [
+    [
+     "Hex shaft",
+     1
+    ],
+    [
+     "Link 2 (k, C-F)",
+     4
+    ],
+    [
+     "Link 1 (j, C-D)",
+     4
+    ],
+    [
+     "Link 4 (f, E-G)",
+     4
+    ],
+    [
+     "Link 3 (c, B-F)",
+     4
+    ],
+    [
+     "Sleeve",
+     1
+    ],
+    [
+     "C-clip",
+     22
+    ]
+   ]
+  }
+ ]
+}

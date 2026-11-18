@@ -1,0 +1,587 @@
+{
+ "leg_scale": 0.75,
+ "crank_ratio": 8.0,
+ "cases": 24,
+ "falls": 0,
+ "worst_pitch_deg": 3.2640175122271637,
+ "mean_abs_speed_mm_s": 30.658395944861798,
+ "servo_torque_mNm_max_mean": 30.75949789580709,
+ "rows": [
+  {
+   "friction": 0.3,
+   "command": 0.3,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 15.7160482546325,
+   "forward_mm": -159.79638300498178,
+   "sideways_mm": -4.783131150644529,
+   "speed_mm_s": -13.3219160487688,
+   "advance_per_rev_mm": -50.859793122009535,
+   "pitch_deg": [
+    -1.326936440542602,
+    1.1227896525052137
+   ],
+   "roll_deg": [
+    -0.36139513286575276,
+    0.39373432392860597
+   ],
+   "servo_torque_mNm_mean": 19.199237246703362,
+   "servo_torque_mNm_peak": 22.406742037045998,
+   "feet_on_floor_mean": 3.7733333333333334,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.3,
+   "command": 0.6,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 39.07396611652469,
+   "forward_mm": -405.20527011790136,
+   "sideways_mm": -10.270681980964424,
+   "speed_mm_s": -33.78118133538152,
+   "advance_per_rev_mm": -51.87266821285673,
+   "pitch_deg": [
+    -1.1614735483270384,
+    1.0505716318952056
+   ],
+   "roll_deg": [
+    -0.31148378744939487,
+    0.23339300929919274
+   ],
+   "servo_torque_mNm_mean": 20.685347370712364,
+   "servo_torque_mNm_peak": 24.461034121120466,
+   "feet_on_floor_mean": 3.6820833333333334,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.3,
+   "command": 1.0,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 70.14098867913063,
+   "forward_mm": -665.3750341862664,
+   "sideways_mm": -27.34123530433021,
+   "speed_mm_s": -55.471032445707905,
+   "advance_per_rev_mm": -47.451026987487374,
+   "pitch_deg": [
+    -1.8259613058019806,
+    1.2391624950775004
+   ],
+   "roll_deg": [
+    -0.38976864114458065,
+    0.3907941243847963
+   ],
+   "servo_torque_mNm_mean": 22.846778597810165,
+   "servo_torque_mNm_peak": 26.701695286800554,
+   "feet_on_floor_mean": 3.4766666666666666,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.3,
+   "command": -0.3,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 15.715236489544225,
+   "forward_mm": 160.0811908941177,
+   "sideways_mm": 3.883134469741611,
+   "speed_mm_s": 13.345659932815147,
+   "advance_per_rev_mm": 50.95307324847848,
+   "pitch_deg": [
+    -1.517862137081758,
+    0.9986915039377106
+   ],
+   "roll_deg": [
+    -0.3006780399853486,
+    0.4652739958138333
+   ],
+   "servo_torque_mNm_mean": 19.201343222087587,
+   "servo_torque_mNm_peak": 22.746962995621367,
+   "feet_on_floor_mean": 3.7816666666666667,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.3,
+   "command": -0.6,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 39.07173418603254,
+   "forward_mm": 408.4709893109011,
+   "sideways_mm": 17.764960258574376,
+   "speed_mm_s": 34.05343804175915,
+   "advance_per_rev_mm": 52.29371884998029,
+   "pitch_deg": [
+    -1.3531963763559849,
+    0.9583771746540818
+   ],
+   "roll_deg": [
+    -0.22314966190854363,
+    0.3585568831272522
+   ],
+   "servo_torque_mNm_mean": 20.689421177513577,
+   "servo_torque_mNm_peak": 24.99230695631295,
+   "feet_on_floor_mean": 3.685416666666667,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.3,
+   "command": -1.0,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 70.26056502955153,
+   "forward_mm": 680.0555515296978,
+   "sideways_mm": 54.81776666072402,
+   "speed_mm_s": 56.69491884365967,
+   "advance_per_rev_mm": 48.41542519888405,
+   "pitch_deg": [
+    -1.3660555773137497,
+    1.581514260814596
+   ],
+   "roll_deg": [
+    -0.3159320217975542,
+    0.37195393979605734
+   ],
+   "servo_torque_mNm_mean": 22.570013283226597,
+   "servo_torque_mNm_peak": 27.935297946276723,
+   "feet_on_floor_mean": 3.4683333333333333,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.5,
+   "command": 0.3,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 14.685321532822622,
+   "forward_mm": -149.15192719674963,
+   "sideways_mm": -3.8125373726013954,
+   "speed_mm_s": -12.434508311525603,
+   "advance_per_rev_mm": -50.803824555289545,
+   "pitch_deg": [
+    -1.1946418706342419,
+    1.0373433756845192
+   ],
+   "roll_deg": [
+    -0.326527792763858,
+    0.3314932376061999
+   ],
+   "servo_torque_mNm_mean": 21.58922853416589,
+   "servo_torque_mNm_peak": 26.598764123137492,
+   "feet_on_floor_mean": 3.774583333333333,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.5,
+   "command": 0.6,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 37.820818792738045,
+   "forward_mm": -386.1258523195464,
+   "sideways_mm": -9.775855338770803,
+   "speed_mm_s": -32.1905670962523,
+   "advance_per_rev_mm": -51.06801194230073,
+   "pitch_deg": [
+    -1.1630743320341983,
+    1.0679006652721503
+   ],
+   "roll_deg": [
+    -0.32609290577667216,
+    0.22901112442347565
+   ],
+   "servo_torque_mNm_mean": 23.587749740906663,
+   "servo_torque_mNm_peak": 32.09065422932479,
+   "feet_on_floor_mean": 3.6804166666666664,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.5,
+   "command": 1.0,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 68.87537683554731,
+   "forward_mm": -600.6411779255758,
+   "sideways_mm": -5.88737199632243,
+   "speed_mm_s": -50.07429578370785,
+   "advance_per_rev_mm": -43.62165239685249,
+   "pitch_deg": [
+    -1.7167073697494941,
+    1.4968650700071386
+   ],
+   "roll_deg": [
+    -0.3885694339579707,
+    0.362480673350653
+   ],
+   "servo_torque_mNm_mean": 25.778806336531193,
+   "servo_torque_mNm_peak": 33.69298215417885,
+   "feet_on_floor_mean": 3.4008333333333334,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.5,
+   "command": -0.3,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 14.70405692414555,
+   "forward_mm": 149.48763299222722,
+   "sideways_mm": 3.878152055297795,
+   "speed_mm_s": 12.462495455792181,
+   "advance_per_rev_mm": 50.85329383618273,
+   "pitch_deg": [
+    -1.4909082207733309,
+    0.9391906122423188
+   ],
+   "roll_deg": [
+    -0.2224632799888759,
+    0.4459459906789891
+   ],
+   "servo_torque_mNm_mean": 21.545791777422338,
+   "servo_torque_mNm_peak": 27.034643618685667,
+   "feet_on_floor_mean": 3.78125,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.5,
+   "command": -0.6,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 37.81757987418791,
+   "forward_mm": 388.9703429573475,
+   "sideways_mm": 12.597851837370186,
+   "speed_mm_s": 32.42770679094185,
+   "advance_per_rev_mm": 51.44862294016089,
+   "pitch_deg": [
+    -1.3791533601431678,
+    0.9168027083738535
+   ],
+   "roll_deg": [
+    -0.21666929285728195,
+    0.37367837322359704
+   ],
+   "servo_torque_mNm_mean": 23.597299741803965,
+   "servo_torque_mNm_peak": 32.45936699150828,
+   "feet_on_floor_mean": 3.6783333333333332,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.5,
+   "command": -1.0,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 69.05051561576452,
+   "forward_mm": 603.3934163470321,
+   "sideways_mm": 18.530440114457704,
+   "speed_mm_s": 50.30374458916483,
+   "advance_per_rev_mm": 43.7103857724245,
+   "pitch_deg": [
+    -1.9020083059855177,
+    1.5848807669514058
+   ],
+   "roll_deg": [
+    -0.2703542421765659,
+    0.3876130516997647
+   ],
+   "servo_torque_mNm_mean": 25.373743013399494,
+   "servo_torque_mNm_peak": 35.760635087934034,
+   "feet_on_floor_mean": 3.3604166666666666,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.8,
+   "command": 0.3,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 13.261865599072825,
+   "forward_mm": -123.33403293037541,
+   "sideways_mm": -3.407026217895213,
+   "speed_mm_s": -10.282120294320585,
+   "advance_per_rev_mm": -46.518886279647276,
+   "pitch_deg": [
+    -1.0534677158042693,
+    1.1600157712682453
+   ],
+   "roll_deg": [
+    -0.37483657530302056,
+    0.22911841886409307
+   ],
+   "servo_torque_mNm_mean": 24.889633249345376,
+   "servo_torque_mNm_peak": 32.094192317472775,
+   "feet_on_floor_mean": 3.7629166666666665,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.8,
+   "command": 0.6,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 36.090793437430484,
+   "forward_mm": -358.80645643664496,
+   "sideways_mm": -12.074871910878366,
+   "speed_mm_s": -29.913001787131716,
+   "advance_per_rev_mm": -49.72958298463177,
+   "pitch_deg": [
+    -1.2743600346429569,
+    1.3804116300666507
+   ],
+   "roll_deg": [
+    -0.3962520344384651,
+    0.27973158743271487
+   ],
+   "servo_torque_mNm_mean": 27.59938075002727,
+   "servo_torque_mNm_peak": 45.900946379234185,
+   "feet_on_floor_mean": 3.6041666666666665,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.8,
+   "command": 1.0,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 67.65889865137316,
+   "forward_mm": -569.3084446890265,
+   "sideways_mm": -0.17830666340144796,
+   "speed_mm_s": -47.46214628503763,
+   "advance_per_rev_mm": -42.08949353101039,
+   "pitch_deg": [
+    -1.905002916381515,
+    2.216559174959362
+   ],
+   "roll_deg": [
+    -0.4625837716276528,
+    0.4287687357433169
+   ],
+   "servo_torque_mNm_mean": 28.605712619708033,
+   "servo_torque_mNm_peak": 47.39943927709642,
+   "feet_on_floor_mean": 3.2504166666666667,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.8,
+   "command": -0.3,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 13.298189827583206,
+   "forward_mm": 123.27271775533228,
+   "sideways_mm": 3.8410053398113044,
+   "speed_mm_s": 10.277008566513736,
+   "advance_per_rev_mm": 46.368755596481655,
+   "pitch_deg": [
+    -1.6208464030060108,
+    0.8841444785902991
+   ],
+   "roll_deg": [
+    -0.22633937705263463,
+    0.49525160805185514
+   ],
+   "servo_torque_mNm_mean": 24.805742251644705,
+   "servo_torque_mNm_peak": 32.57326653307123,
+   "feet_on_floor_mean": 3.767916666666667,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.8,
+   "command": -0.6,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 36.11556707754926,
+   "forward_mm": 360.09463017735806,
+   "sideways_mm": 7.620139330972021,
+   "speed_mm_s": 30.020394345757236,
+   "advance_per_rev_mm": 49.87388559835572,
+   "pitch_deg": [
+    -1.7362322979382026,
+    0.9716653459119814
+   ],
+   "roll_deg": [
+    -0.2676262391325745,
+    0.4437376951872659
+   ],
+   "servo_torque_mNm_mean": 27.541831971754952,
+   "servo_torque_mNm_peak": 46.0151242831563,
+   "feet_on_floor_mean": 3.620833333333333,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 0.8,
+   "command": -1.0,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 68.11190411084236,
+   "forward_mm": 564.7735784603287,
+   "sideways_mm": -66.93818113934188,
+   "speed_mm_s": 47.0840832397106,
+   "advance_per_rev_mm": 41.476523542570185,
+   "pitch_deg": [
+    -2.763821669190278,
+    1.6595766047156302
+   ],
+   "roll_deg": [
+    -0.3124067011340048,
+    0.44333182592424664
+   ],
+   "servo_torque_mNm_mean": 27.548985502396484,
+   "servo_torque_mNm_peak": 55.15188835757248,
+   "feet_on_floor_mean": 3.1733333333333333,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 1.0,
+   "command": 0.3,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 12.333083738762884,
+   "forward_mm": -112.2694551472909,
+   "sideways_mm": -3.3916445421546153,
+   "speed_mm_s": -9.359687798857097,
+   "advance_per_rev_mm": -45.53453781931082,
+   "pitch_deg": [
+    -1.0690495203080306,
+    1.3012872812674905
+   ],
+   "roll_deg": [
+    -0.41823396689370607,
+    0.2669988946320178
+   ],
+   "servo_torque_mNm_mean": 27.04252659438411,
+   "servo_torque_mNm_peak": 35.59751105951283,
+   "feet_on_floor_mean": 3.7483333333333335,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 1.0,
+   "command": 0.6,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 35.0824638793713,
+   "forward_mm": -335.14053515824116,
+   "sideways_mm": -15.027192826887687,
+   "speed_mm_s": -27.940019604688715,
+   "advance_per_rev_mm": -47.784590673149864,
+   "pitch_deg": [
+    -1.307401659089939,
+    1.5905438116840096
+   ],
+   "roll_deg": [
+    -0.4369024994264489,
+    0.38502667718735223
+   ],
+   "servo_torque_mNm_mean": 29.93720431196671,
+   "servo_torque_mNm_peak": 52.632704485522666,
+   "feet_on_floor_mean": 3.58625,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 1.0,
+   "command": 1.0,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 66.72624782711526,
+   "forward_mm": -543.2325456832012,
+   "sideways_mm": 80.23926733209103,
+   "speed_mm_s": -45.2882489106462,
+   "advance_per_rev_mm": -40.7230291395848,
+   "pitch_deg": [
+    -2.0755401548872725,
+    2.705914307049885
+   ],
+   "roll_deg": [
+    -0.5190051784195902,
+    0.49372850837169685
+   ],
+   "servo_torque_mNm_mean": 30.75949789580709,
+   "servo_torque_mNm_peak": 56.19560989521616,
+   "feet_on_floor_mean": 3.19,
+   "feet_on_floor_min": 1,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 1.0,
+   "command": -0.3,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 12.338958187223023,
+   "forward_mm": 112.36669347312261,
+   "sideways_mm": 3.7781868057151544,
+   "speed_mm_s": 9.367794370414556,
+   "advance_per_rev_mm": 45.55227870104089,
+   "pitch_deg": [
+    -1.7951151892834845,
+    0.8893757849722046
+   ],
+   "roll_deg": [
+    -0.23219622015928207,
+    0.5519387500803509
+   ],
+   "servo_torque_mNm_mean": 27.029014183814407,
+   "servo_torque_mNm_peak": 35.8935594134538,
+   "feet_on_floor_mean": 3.756666666666667,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 1.0,
+   "command": -0.6,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 35.30492084083169,
+   "forward_mm": 337.14988314046064,
+   "sideways_mm": 9.405357629352418,
+   "speed_mm_s": 28.107535067983378,
+   "advance_per_rev_mm": 47.768188227419756,
+   "pitch_deg": [
+    -2.030144750690006,
+    1.021127540666124
+   ],
+   "roll_deg": [
+    -0.40325662028129644,
+    0.49461965607254416
+   ],
+   "servo_torque_mNm_mean": 29.417267027658482,
+   "servo_torque_mNm_peak": 53.674203369016055,
+   "feet_on_floor_mean": 3.6033333333333335,
+   "feet_on_floor_min": 2,
+   "total_mass_g": 356.1501661324045
+  },
+  {
+   "friction": 1.0,
+   "command": -1.0,
+   "seconds": 14.0,
+   "fallen": false,
+   "crank_rpm": 67.16525918065324,
+   "forward_mm": 529.4352827730884,
+   "sideways_mm": -80.9131110386712,
+   "speed_mm_s": 44.137997730144924,
+   "advance_per_rev_mm": 39.42931057089593,
+   "pitch_deg": [
+    -3.2640175122271637,
+    1.7554457324039445
+   ],
+   "roll_deg": [
+    -0.4085041203959785,
+    0.488122178550211
+   ],
+   "servo_torque_mNm_mean": 29.736849551532945,
+   "servo_torque_mNm_peak": 58.87477386765161,
+   "feet_on_floor_mean": 3.1508333333333334,
+   "feet_on_floor_min": 1,
+   "total_mass_g": 356.1501661324045
+  }
+ ]
+}
