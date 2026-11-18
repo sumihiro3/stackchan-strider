@@ -22,18 +22,22 @@ X_UP = d.mat([[0, 1, 0, 0], [0, 0, 1, 0], [1, 0, 0, 0]])  # ローカル +X を�
 X_DOWN = d.mat([[0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0]])  # ローカル +X を下へ(Y 軸まわり 90°)
 FLIP = d.mat([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0]])  # 上下反転(X 軸まわり 180°)
 MIRROR_U = d.mat([[-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]])
+Y_DOWN = d.mat([[1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0]])  # ローカル +Y を下へ(X 軸まわり -90°)
 
 # 部品 → (造形時の向きへの行列, 向きの説明)
 PRINT_POSE = {
     "side_plate": (X_UP, "内面を下、スタッドを上"),
     "deck": (np.eye(4), "そのまま(ボスを上)"),
     "yoke": (np.eye(4), "カラーを下、イヤーパッドを上"),
+    "cowl": (Y_DOWN, "鼻先を下、舌を上"),
     "gear_table": (FLIP, "円板を下、歯と軸を上"),
     "socket_frame": (FLIP, "上面を下、ツメを上"),
     "pinion": (X_DOWN, "背面を下、歯と筒を上"),
     "shaft": (np.eye(4), "六角の平らな面を下にして寝かせる"),
     "sleeve": (X_UP, "立てる"),
     "crank": (X_UP, "円板を下、ピンを上"),
+    "spur": (X_UP, "内面を下、合わせ印を上"),
+    "cover": (X_UP, "内面を下、座を上"),
     "clip": (X_UP, "寝かせる"),
     "link_j": (np.eye(4), "スタッドを上"),
     "link_k": (np.eye(4), "寝かせる"),
@@ -149,7 +153,7 @@ COLOR_ROLES = (("chassis", "1_骨格"), ("accent", "2_主役"), ("link", "3_つ�
 PLATE_NAMES = {"chassis": "Frame", "accent": "Accent", "link": "Links"}
 ENGLISH_NAMES = {
     "side_plate": "Side plate", "deck": "Deck", "yoke": "Yoke (collar + ear pads)", "gear_table": "Turntable gear",
-    "socket_frame": "Socket frame", "pinion": "Pinion", "shaft": "Hex shaft", "sleeve": "Sleeve", "crank": "Crank",
+    "socket_frame": "Socket frame", "cowl": "Cowl (front / rear)", "pinion": "Pinion", "shaft": "Hex shaft", "sleeve": "Sleeve", "crank": "Crank gear", "spur": "Shaft spur gear", "cover": "Gear cover",
     "clip": "C-clip", "link_j": "Link 1 (j, C-D)", "link_k": "Link 2 (k, C-F)", "link_c": "Link 3 (c, B-F)",
     "link_f": "Link 4 (f, E-G)", "tri_upper": "Upper triangle", "tri_lower": "Lower triangle (foot)",
 }
@@ -340,6 +344,19 @@ def project_settings() -> dict:
     return config
 
 
+REFERENCE_PROJECT = d.ROOT / "print" / "stackchan_strider.3mf"
+
+
+def project_settings_text() -> str:
+    """プロジェクト設定の JSON。Bambu Studio が入っていない環境では、元の配布 3MF(A1 mini 用)の設定をそのまま借りる。"""
+    if (BS_PROFILES / "machine").is_dir():
+        return json.dumps(project_settings(), ensure_ascii=False, indent=4)
+    import zipfile
+
+    with zipfile.ZipFile(REFERENCE_PROJECT) as archive:
+        return archive.read("Metadata/project_settings.config").decode("utf-8")
+
+
 def write_bambu_project(path, plates) -> None:
     """Bambu Studio のプロジェクト形式で、複数プレートを 1 つの 3MF に書く。
 
@@ -393,7 +410,7 @@ def write_bambu_project(path, plates) -> None:
         archive.writestr("_rels/.rels", rels)
         archive.writestr("3D/3dmodel.model", "\n".join(model))
         archive.writestr("Metadata/model_settings.config", "\n".join(config))
-        archive.writestr("Metadata/project_settings.config", json.dumps(project_settings(), ensure_ascii=False, indent=4))
+        archive.writestr("Metadata/project_settings.config", project_settings_text())
 
 
 def write_plates(only: set | None = None, file_name: str = PROJECT_FILE) -> list[dict]:

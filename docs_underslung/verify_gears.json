@@ -1,0 +1,74 @@
+{
+ "ok": true,
+ "specs": [
+  {
+   "item": "歯数(ターンテーブル:ピニオン)",
+   "value": "20:20",
+   "ok": true
+  },
+  {
+   "item": "モジュール(外端)",
+   "value": "2.00 mm(両歯車とも同じ諸元から生成)",
+   "ok": true
+  },
+  {
+   "item": "ピッチ円錐半角の和 = 軸角",
+   "value": "45.00° + 45.00° = 90°",
+   "ok": true
+  },
+  {
+   "item": "歯の向き",
+   "value": "ピッチ円錐半角 45°(下向き45°の歯で回転軸を90°変換)",
+   "ok": true
+  },
+  {
+   "item": "円錐距離 R / 歯幅 b",
+   "value": "R=28.28 mm, b=8.0 mm (b ≤ R/3 = 9.43)",
+   "ok": true
+  },
+  {
+   "item": "切り下げ(仮想歯数)",
+   "value": "zv=28.3 ≥ 17.1",
+   "ok": true
+  },
+  {
+   "item": "かみあい率(仮想平歯車)",
+   "value": "1.64 ≥ 1.2",
+   "ok": true
+  }
+ ],
+ "cases": [
+  {
+   "case": "設計位置",
+   "max_overlap_mm3": 0.0,
+   "backlash_min_mm": 0.511774340358347,
+   "backlash_max_mm": 0.514458806737147,
+   "half_pitch_mm": 3.141592653589793,
+   "ok": true
+  },
+  {
+   "case": "ピニオンが軸方向に 0.4 mm 奥へずれた場合(組立ガタの上限)",
+   "max_overlap_mm3": 0.0,
+   "backlash_min_mm": 0.1317306001596794,
+   "backlash_max_mm": 0.21034711553881852,
+   "half_pitch_mm": 3.141592653589793,
+   "ok": true
+  },
+  {
+   "case": "ピニオンが軸方向に 0.4 mm 手前へずれた場合",
+   "max_overlap_mm3": 0.0,
+   "backlash_min_mm": 0.6440801833134836,
+   "backlash_max_mm": 0.7062064052228522,
+   "half_pitch_mm": 3.141592653589793,
+   "ok": true
+  },
+  {
+   "case": "ターンテーブルが 0.6 mm 浮いた場合(カラーの上限)",
+   "max_overlap_mm3": 0.0,
+   "backlash_min_mm": 0.7219297082986799,
+   "backlash_max_mm": 0.7913423389505052,
+   "half_pitch_mm": 3.141592653589793,
+   "ok": true
+  }
+ ]
+}

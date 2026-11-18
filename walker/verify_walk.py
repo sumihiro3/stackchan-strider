@@ -30,8 +30,8 @@ SERVO_STALL_NM = 1.89 * 9.81e-2
 TILT_LIMIT_DEG = 8.0
 
 # 設計上つながっている(すきまが小さくて当然の)組み合わせ。部品名の接頭辞で判定する
-CHASSIS = ("side_plate", "deck", "yoke")
-SHAFT = ("pinion", "shaft", "sleeve", "crank", "clip")
+CHASSIS = ("side_plate", "deck", "yoke", "cowl", "cover")
+SHAFT = ("pinion", "shaft", "sleeve", "crank", "clip", "spur")
 TABLE = ("gear_table", "socket_frame", "sc_base")
 HEAD = ("sc_",)  # sc_base は TABLE が先に拾う
 
@@ -61,7 +61,7 @@ def _jointed(a: str, b: str) -> bool:
     if other == "shaft":  # クランクピンに掛かるのは j と k、クリップはその外側
         return leg_part.endswith(("_j", "_k")) and other_part.startswith(("crank", "clip"))
     if other == "chassis":  # 固定ピボット B に掛かるのは c と上三角
-        return leg_part.endswith(("_c", "_tri_upper", "_clip_B")) and other_part.startswith("side_plate")
+        return leg_part.endswith(("_c", "_tri_upper", "_clip_B")) and other_part.startswith(("side_plate", "cover"))
     return False
 
 
