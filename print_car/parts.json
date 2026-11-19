@@ -1,0 +1,779 @@
+{
+ "parts": [
+  {
+   "key": "rail_R",
+   "label": "右の側板",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    47.9,
+    157.5,
+    28.5
+   ],
+   "volume_cm3": 19.09,
+   "overhang_mm2": 376.1,
+   "bed_mm2": 3184.7,
+   "orientation": "内面を下",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "rail_L",
+   "label": "左の側板",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    157.5,
+    47.9,
+    28.5
+   ],
+   "volume_cm3": 19.09,
+   "overhang_mm2": 376.1,
+   "bed_mm2": 3184.7,
+   "orientation": "内面を下",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "deck",
+   "label": "デッキ(walker と同じ)",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    106.8,
+    74.0,
+    16.5
+   ],
+   "volume_cm3": 18.06,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 5365.6,
+   "orientation": "そのまま(ボスを上)",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "yoke",
+   "label": "ヨーク(車用。耳当ての逃げとぽっちの穴)",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    106.8,
+    89.4,
+    59.6
+   ],
+   "volume_cm3": 19.28,
+   "overhang_mm2": 67.9,
+   "bed_mm2": 1521.2,
+   "orientation": "カラーを下、パッドを上",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "gear_table",
+   "label": "ターンテーブル歯車(walker と同じ)",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    82.0,
+    82.0,
+    20.5
+   ],
+   "volume_cm3": 21.56,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 5213.6,
+   "orientation": "円板を下、歯と軸を上",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "socket_frame",
+   "label": "ソケット枠(walker と同じ)",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    82.0,
+    82.0,
+    7.8
+   ],
+   "volume_cm3": 14.87,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 2043.7,
+   "orientation": "上面を下、ツメを上",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "pinion",
+   "label": "ピニオン(walker と同じ)",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    42.5,
+    42.5,
+    73.0
+   ],
+   "volume_cm3": 10.47,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 923.4,
+   "orientation": "背面を下、歯と筒を上",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "sleeve",
+   "label": "スリーブ(walker と同じ)",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    18.0,
+    18.0,
+    28.4
+   ],
+   "volume_cm3": 2.13,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 53.3,
+   "orientation": "立てる",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "shaft",
+   "label": "後ろの車軸(六角)",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    129.0,
+    9.0,
+    7.8
+   ],
+   "volume_cm3": 6.8,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 580.9,
+   "orientation": "六角の平らな面を下にして寝かせる",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "beam",
+   "label": "前の横棒",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    110.0,
+    10.0,
+    8.0
+   ],
+   "volume_cm3": 8.26,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 1032.7,
+   "orientation": "寝かせる",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "knuckle_R",
+   "label": "右前のナックル",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    28.8,
+    44.2,
+    23.5
+   ],
+   "volume_cm3": 2.49,
+   "overhang_mm2": 224.6,
+   "bed_mm2": 37.1,
+   "orientation": "後ろの面を下(ピンはすべて寝かせる)",
+   "support": true,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "knuckle_L",
+   "label": "左前のナックル",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    22.4,
+    44.2,
+    23.5
+   ],
+   "volume_cm3": 2.18,
+   "overhang_mm2": 176.5,
+   "bed_mm2": 37.1,
+   "orientation": "後ろの面を下(ピンはすべて寝かせる)",
+   "support": true,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "hat",
+   "label": "ハット",
+   "color": "black",
+   "count": 1,
+   "size_mm": [
+    81.7,
+    56.2,
+    90.9
+   ],
+   "volume_cm3": 29.24,
+   "overhang_mm2": 1425.8,
+   "bed_mm2": 89.0,
+   "orientation": "後ろの口を下、前(ひさし)を上",
+   "support": true,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "hat_back",
+   "label": "ハットの後ろの止め板",
+   "color": "black",
+   "count": 1,
+   "size_mm": [
+    57.1,
+    6.6,
+    1.2
+   ],
+   "volume_cm3": 0.45,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 376.9,
+   "orientation": "寝かせる",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "link",
+   "label": "かじ取りの引き棒",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    12.9,
+    108.3,
+    50.3
+   ],
+   "volume_cm3": 1.99,
+   "overhang_mm2": 262.9,
+   "bed_mm2": 98.5,
+   "orientation": "水平の板を下、縦の板を立てる",
+   "support": true,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "tie_rod",
+   "label": "タイロッド",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    108.0,
+    8.0,
+    2.4
+   ],
+   "volume_cm3": 1.93,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 806.1,
+   "orientation": "寝かせる",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "clip",
+   "label": "C クリップ(walker と同じ)",
+   "color": "gray",
+   "count": 8,
+   "size_mm": [
+    9.0,
+    9.2,
+    1.0
+   ],
+   "volume_cm3": 0.05,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 48.1,
+   "orientation": "寝かせる",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "wheel_rear",
+   "label": "後輪のホイール",
+   "color": "gray",
+   "count": 2,
+   "size_mm": [
+    47.0,
+    47.0,
+    17.1
+   ],
+   "volume_cm3": 8.3,
+   "overhang_mm2": 2125.8,
+   "bed_mm2": 626.3,
+   "orientation": "外の面を下(皿の下面はリムとハブの間 11 mm の橋)",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "wheel_front",
+   "label": "前輪のホイール",
+   "color": "gray",
+   "count": 2,
+   "size_mm": [
+    47.0,
+    47.0,
+    10.0
+   ],
+   "volume_cm3": 7.68,
+   "overhang_mm2": 1102.9,
+   "bed_mm2": 1677.4,
+   "orientation": "内の面を下(皿の下面は 11 mm の橋)",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "hubcap",
+   "label": "ホイールキャップ",
+   "color": "red",
+   "count": 4,
+   "size_mm": [
+    14.0,
+    14.0,
+    6.2
+   ],
+   "volume_cm3": 0.43,
+   "overhang_mm2": 130.4,
+   "bed_mm2": 23.1,
+   "orientation": "差し込みの筒を下",
+   "support": true,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "tire",
+   "label": "タイヤ",
+   "color": "black",
+   "count": 4,
+   "size_mm": [
+    60.0,
+    60.0,
+    7.4
+   ],
+   "volume_cm3": 8.58,
+   "overhang_mm2": 259.0,
+   "bed_mm2": 1016.6,
+   "orientation": "寝かせる",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "body_rear",
+   "label": "後ろのボディ",
+   "color": "red",
+   "count": 1,
+   "size_mm": [
+    113.6,
+    53.8,
+    109.0
+   ],
+   "volume_cm3": 31.62,
+   "overhang_mm2": 2017.4,
+   "bed_mm2": 1460.8,
+   "orientation": "後ろの面を下",
+   "support": true,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "body_front",
+   "label": "前のボディ",
+   "color": "red",
+   "count": 1,
+   "size_mm": [
+    112.0,
+    53.8,
+    99.0
+   ],
+   "volume_cm3": 35.81,
+   "overhang_mm2": 2526.7,
+   "bed_mm2": 236.5,
+   "orientation": "後ろ(風防側)の切り口を下",
+   "support": true,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "fender_rear_R",
+   "label": "右後ろのフェンダー",
+   "color": "black",
+   "count": 1,
+   "size_mm": [
+    79.0,
+    53.0,
+    13.5
+   ],
+   "volume_cm3": 3.74,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 267.5,
+   "orientation": "内側の縁を下(外の面を上)",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "fender_rear_L",
+   "label": "左後ろのフェンダー",
+   "color": "black",
+   "count": 1,
+   "size_mm": [
+    53.0,
+    79.0,
+    13.5
+   ],
+   "volume_cm3": 3.74,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 267.5,
+   "orientation": "内側の縁を下(外の面を上)",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "fender_front_R",
+   "label": "右前のフェンダー",
+   "color": "black",
+   "count": 1,
+   "size_mm": [
+    70.0,
+    24.5,
+    13.5
+   ],
+   "volume_cm3": 2.23,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 159.2,
+   "orientation": "内側の縁を下(外の面を上)",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "fender_front_L",
+   "label": "左前のフェンダー",
+   "color": "black",
+   "count": 1,
+   "size_mm": [
+    24.5,
+    70.0,
+    13.5
+   ],
+   "volume_cm3": 2.23,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 159.2,
+   "orientation": "内側の縁を下(外の面を上)",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "molding_body_R",
+   "label": "右の横のモール",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    6.9,
+    112.0,
+    2.0
+   ],
+   "volume_cm3": 0.2,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 101.2,
+   "orientation": "寝かせる",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "molding_body_L",
+   "label": "左の横のモール",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    6.9,
+    112.0,
+    2.0
+   ],
+   "volume_cm3": 0.2,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 101.2,
+   "orientation": "寝かせる",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "molding_hood_R",
+   "label": "右のボンネットのモール",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    11.0,
+    64.0,
+    3.4
+   ],
+   "volume_cm3": 0.11,
+   "overhang_mm2": 139.2,
+   "bed_mm2": 0.0,
+   "orientation": "表の面を下",
+   "support": true,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "molding_hood_L",
+   "label": "左のボンネットのモール",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    64.0,
+    11.0,
+    3.4
+   ],
+   "volume_cm3": 0.11,
+   "overhang_mm2": 139.2,
+   "bed_mm2": 0.0,
+   "orientation": "表の面を下",
+   "support": true,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "mirror_R",
+   "label": "右のフェンダーミラー",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    12.5,
+    6.0,
+    19.8
+   ],
+   "volume_cm3": 0.34,
+   "overhang_mm2": 35.0,
+   "bed_mm2": 7.1,
+   "orientation": "差し込みの棒を下",
+   "support": true,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "mirror_L",
+   "label": "左のフェンダーミラー",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    12.5,
+    6.0,
+    19.8
+   ],
+   "volume_cm3": 0.34,
+   "overhang_mm2": 35.0,
+   "bed_mm2": 7.1,
+   "orientation": "差し込みの棒を下",
+   "support": true,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "windshield",
+   "label": "風防の枠",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    86.0,
+    17.1,
+    2.4
+   ],
+   "volume_cm3": 0.69,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 288.8,
+   "orientation": "寝かせる",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "top",
+   "label": "たたんだ幌",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    96.0,
+    20.5,
+    15.0
+   ],
+   "volume_cm3": 20.36,
+   "overhang_mm2": 912.1,
+   "bed_mm2": 607.0,
+   "orientation": "組んだときの向き",
+   "support": true,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "bumper",
+   "label": "バンパー",
+   "color": "gray",
+   "count": 2,
+   "size_mm": [
+    96.4,
+    12.4,
+    6.4
+   ],
+   "volume_cm3": 3.25,
+   "overhang_mm2": 244.0,
+   "bed_mm2": 81.2,
+   "orientation": "上面を下",
+   "support": true,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "grille",
+   "label": "グリル",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    25.0,
+    36.2,
+    15.0
+   ],
+   "volume_cm3": 9.05,
+   "overhang_mm2": 6.1,
+   "bed_mm2": 686.3,
+   "orientation": "後ろの面を下、盾を上",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "headlight",
+   "label": "ヘッドライト",
+   "color": "gray",
+   "count": 2,
+   "size_mm": [
+    15.0,
+    15.0,
+    18.9
+   ],
+   "volume_cm3": 2.0,
+   "overhang_mm2": 81.9,
+   "bed_mm2": 12.4,
+   "orientation": "レンズを下",
+   "support": true,
+   "watertight": true,
+   "fits_bed": true
+  }
+ ],
+ "plates": [
+  {
+   "plate": 1,
+   "name": "Gray 1 #9a9a96",
+   "color": "gray",
+   "parts": 29,
+   "contents": {
+    "clip": 8,
+    "molding_body_L": 1,
+    "shaft": 1,
+    "knuckle_R": 1,
+    "windshield": 1,
+    "beam": 1,
+    "pinion": 1,
+    "tie_rod": 1,
+    "socket_frame": 1,
+    "mirror_L": 1,
+    "bumper": 1,
+    "headlight": 2,
+    "wheel_front": 1,
+    "grille": 1,
+    "molding_body_R": 1,
+    "molding_hood_L": 1,
+    "mirror_R": 1,
+    "link": 1,
+    "sleeve": 1,
+    "molding_hood_R": 1,
+    "knuckle_L": 1
+   }
+  },
+  {
+   "plate": 2,
+   "name": "Gray 2 #9a9a96",
+   "color": "gray",
+   "parts": 6,
+   "contents": {
+    "rail_R": 1,
+    "top": 1,
+    "wheel_rear": 2,
+    "bumper": 1,
+    "deck": 1
+   }
+  },
+  {
+   "plate": 3,
+   "name": "Gray 3 #9a9a96",
+   "color": "gray",
+   "parts": 4,
+   "contents": {
+    "gear_table": 1,
+    "yoke": 1,
+    "rail_L": 1,
+    "wheel_front": 1
+   }
+  },
+  {
+   "plate": 4,
+   "name": "Red #c8372d",
+   "color": "red",
+   "parts": 6,
+   "contents": {
+    "body_rear": 1,
+    "body_front": 1,
+    "hubcap": 4
+   }
+  },
+  {
+   "plate": 5,
+   "name": "Black 1 #26262a",
+   "color": "black",
+   "parts": 9,
+   "contents": {
+    "hat": 1,
+    "fender_rear_L": 1,
+    "fender_front_L": 1,
+    "tire": 3,
+    "fender_rear_R": 1,
+    "fender_front_R": 1,
+    "hat_back": 1
+   }
+  },
+  {
+   "plate": 6,
+   "name": "Black 2 #26262a",
+   "color": "black",
+   "parts": 1,
+   "contents": {
+    "tire": 1
+   }
+  }
+ ]
+}
