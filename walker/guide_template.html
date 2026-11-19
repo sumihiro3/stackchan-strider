@@ -47,6 +47,7 @@ body {
 .progress i { display: block; height: 100%; width: 0; background: var(--signal); }
 .now { position: absolute; left: 14px; top: 12px; font: 600 12px var(--font-display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); pointer-events: none; }
 .now b { color: var(--ink); font-weight: 700; }
+.flip-label { position: absolute; left: 0; top: 0; padding: 3px 9px; border-radius: 6px; background: rgba(16, 20, 26, 0.55); color: #fff; font: 700 13px var(--font-display); white-space: nowrap; pointer-events: none; will-change: transform; }
 .drag-hint { position: absolute; right: 12px; bottom: 10px; font-size: 11px; color: var(--ink-soft); pointer-events: none; }
 .fail { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--note-ink); }
 
@@ -114,6 +115,7 @@ ol.do li.current { color: var(--signal); font-weight: 700; }
       <canvas id="view"></canvas>
       <div class="progress"><i id="bar"></i></div>
       <div class="now" id="now"></div>
+      <div id="flip-labels"></div>
       <div class="drag-hint">横にドラッグで回転</div>
       <div class="fail" id="fail" hidden>3D 表示を開始できませんでした。WebGL が使えるブラウザで開いてください。手順の文章はそのまま読めます。</div>
     </div>
@@ -485,6 +487,18 @@ ol.do li.current { color: var(--signal); font-weight: 700; }
   items.forEach((item) => {
     item.leg = /^(RR|RF|LR|LF)_/.test(item.inst.name) ? item.inst.name.slice(0, 2) : null;
     item.t = -1;
+    // 裏返して付ける三角板: 組んでいる間、部品の位置に重ねて出すラベル
+    item.flip = null;
+    if (item.leg && DATA.legPlan.flipped.indexOf(item.leg) >= 0 && /^tri_/.test(item.inst.part)) {
+      const el = document.createElement("div");
+      el.className = "flip-label";
+      el.textContent = "裏返す";
+      el.hidden = true;
+      $("flip-labels").appendChild(el);
+      const g = geometries[item.inst.part];
+      g.computeBoundingBox();
+      item.flip = { el: el, center: g.boundingBox.getCenter(new THREE.Vector3()) };
+    }
     item.marks = (item.part.marks || []).map((mark) => {
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute("position", new THREE.BufferAttribute(f32(mark.v), 3));
@@ -562,10 +576,14 @@ ol.do li.current { color: var(--signal); font-weight: 700; }
     const lit = {};
     let leg = null;
     const windowOf = () => 1.6;
+    state.leg = null;
     if (legStep) {
       let current = -1;
       LEG.ops.forEach((op, index) => { if (p >= op[0]) current = index; });
-      items.forEach((item) => { if (item.leg && item.asm.step === S && item.asm.op === current) leg = item.leg; });
+      // いまの操作の脚。脚に属さない操作(ピンのクリップ)の間は、直前に組んでいた脚のままにする
+      let found = -1;
+      items.forEach((item) => { if (item.leg && item.asm.step === S && item.asm.op <= current && item.asm.op > found) { found = item.asm.op; leg = item.leg; } });
+      state.leg = leg;
     } else {
       items.forEach((item) => {
         if (!item.marks.length || !(item.t > 0 && item.t < windowOf(item))) return;
@@ -606,6 +624,20 @@ ol.do li.current { color: var(--signal); font-weight: 700; }
     while (turn < -Math.PI) turn += 2 * Math.PI;
     return { az: from.az + turn * k, pol: from.pol + (to.pol - from.pol) * k, r: from.r + (to.r - from.r) * k,
       at: [0, 1, 2].map((i) => from.at[i] + (to.at[i] - from.at[i]) * k) };
+  }
+  // 「裏返す」のラベル: その脚を組んでいる間、裏返して付ける三角板の中心に重ねる
+  const flipPoint = new THREE.Vector3();
+  function placeFlipLabels() {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    items.forEach((item) => {
+      if (!item.flip) return;
+      const on = item.mesh.visible && item.asm.step === state.step && item.leg === state.leg;
+      item.flip.el.hidden = !on;
+      if (!on) return;
+      flipPoint.copy(item.flip.center).applyMatrix4(item.mesh.matrixWorld).project(camera);
+      const x = (flipPoint.x + 1) / 2 * w, y = (1 - flipPoint.y) / 2 * h;
+      item.flip.el.style.transform = "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px) translate(-50%,-50%)";
+    });
   }
   let portrait = false;
   function placeCamera() {
@@ -656,6 +688,7 @@ ol.do li.current { color: var(--signal); font-weight: 700; }
     pose();
     placeCamera();
     renderer.render(scene, camera);
+    placeFlipLabels();  // 描画のあと(部品のワールド行列が更新されてから)
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);

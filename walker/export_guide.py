@@ -79,7 +79,8 @@ def main() -> int:
         inst["asm"] = assembly(inst["name"], legs)
     ops = plan.side_ops("R")
     # list: 操作 → 説明の箇条書きの何行目か(0 行目はクランクを回す)
-    data["legPlan"] = dict(steps=sorted(STEP_SIDE.values()), turn=LEG_TURN, ops=leg_timing(len(ops)), list=[op.line + 1 for op in ops])
+    data["legPlan"] = dict(steps=sorted(STEP_SIDE.values()), turn=LEG_TURN, ops=leg_timing(len(ops)), list=[op.line + 1 for op in ops],
+                           flipped=[name for name, sx, sy in d.LEGS if sx * sy < 0])  # flipped: 三角板を裏返して付ける脚
     # 刻印: 部品ごとに、溝を埋める形(光らせる用)と中心位置、文字、種類(リンク番号 / ジョイント記号)
     for key, link in (("link_j", "j"), ("link_k", "k"), ("link_c", "c"), ("link_f", "f"), ("tri_upper", "tri_upper"), ("tri_lower", "tri_lower")):
         marks = []
