@@ -1,11 +1,13 @@
 """印刷する部品を造形時の向きで STL に書き出し、色ごとのプレートに並べた 3MF と部品表を作る。
 
-使い方: python car/build_car.py
+使い方: python car/build_car.py [--reference <Bambu Studio で P2S を選んで保存した .3mf>]
+  --reference を渡すと、その 3MF のプロジェクト設定を car/bambu_p2s_settings.json に写して正本にする
 出力: out/car/stl/<部品>_x<個数>.stl(ベッド面 = z 0 の造形時の向き)、out/car/3mf/stackchan_car.3mf(グレー・赤・黒のプレート)、out/car/parts.json
 公開用に同じものを print_car/ へ写す(out/ は git の対象外)
 """
 from __future__ import annotations
 
+import argparse
 import json
 import shutil
 import sys
@@ -19,14 +21,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "walker"))
 import build as wb  # noqa: E402  walker の向きの行列・オーバーハングの数え方・輪郭での詰め方・Bambu Studio の 3MF をそのまま使う
 
 d = c.d
-BED = wb.BED
+# 印刷は Bambu Lab P2S(ベッド 256 mm 角、高さ 256 mm)。walker の詰め方はモジュールの BED を見るので、ここで差し替える
+BED = 256.0
+wb.BED = BED
+wb.PLATE_STRIDE = BED * 1.2  # Bambu Studio のプレート格子の間隔(ベッド幅 × 1.2)
+P2S_SETTINGS = Path(__file__).with_name("bambu_p2s_settings.json")
 Y_UP = d.mat([[1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0]])  # ローカル +Y を上へ(X 軸まわり 90°)
 Z_UP, Z_DOWN, X_UP, X_DOWN, Y_DOWN = np.eye(4), wb.FLIP, wb.X_UP, wb.X_DOWN, wb.Y_DOWN
 
 # 部品 → (造形時の向きへの行列, 向きの説明, サポートの要否)。6 方向のオーバーハング面積とベッドに接する面積を比べて選んだ
 PRINT_POSE = {
-    "rail_R": (X_DOWN, "内面を下", False),
-    "rail_L": (X_UP, "内面を下", False),
+    "rail_R": (X_DOWN, "内面を下", True),  # Bambu Studio でスライスするとサポートが要った
+    "rail_L": (X_UP, "内面を下", True),
     "deck": (Z_UP, "そのまま(ボスを上)", False),
     "yoke": (Z_UP, "カラーを下、パッドを上", False),
     "gear_table": (Z_DOWN, "円板を下、歯と軸を上", False),
@@ -48,8 +54,8 @@ PRINT_POSE = {
     "tire": (X_UP, "寝かせる", False),
     "body_rear": (Y_UP, "後ろの面を下", True),
     "body_front": (Y_UP, "後ろ(風防側)の切り口を下", True),
-    "fender_rear_R": (X_UP, "内側の縁を下(外の面を上)", False),
-    "fender_rear_L": (X_DOWN, "内側の縁を下(外の面を上)", False),
+    "fender_rear_R": (X_DOWN, "外側の縁を下、ピンを上", False),
+    "fender_rear_L": (X_UP, "外側の縁を下、ピンを上", False),
     "fender_front_R": (X_UP, "内側の縁を下(外の面を上)", False),
     "fender_front_L": (X_DOWN, "内側の縁を下(外の面を上)", False),
     "molding_body_R": (Z_DOWN, "寝かせる", False),
@@ -60,8 +66,9 @@ PRINT_POSE = {
     "mirror_L": (Z_UP, "差し込みの棒を下", True),
     "windshield": (Y_UP, "寝かせる", False),
     "top": (Z_UP, "組んだときの向き", True),
-    "bumper": (Z_DOWN, "上面を下", True),
-    "grille": (Y_UP, "後ろの面を下、盾を上", False),
+    "bumper_front": (Z_UP, "腕と棒の下面を下(ツメの爪は層の中で開く)", False),
+    "bumper_rear": (Z_UP, "腕と棒の下面を下(ツメの爪は層の中で開く)", False),
+    "grille": (Y_UP, "後ろの面を下、盾を上", True),  # Bambu Studio でスライスするとサポートが要った
     "headlight": (Y_DOWN, "レンズを下", True),
 }
 # 3MF の中(Bambu Studio の画面)で使う英語名
@@ -74,10 +81,14 @@ ENGLISH_NAMES = {
     "fender_rear_L": "Fender rear L", "fender_front_R": "Fender front R", "fender_front_L": "Fender front L",
     "molding_body_R": "Molding body R", "molding_body_L": "Molding body L", "molding_hood_R": "Molding hood R",
     "molding_hood_L": "Molding hood L", "mirror_R": "Mirror R", "mirror_L": "Mirror L", "windshield": "Windshield",
-    "top": "Folded top", "bumper": "Bumper", "grille": "Grille", "headlight": "Headlight",
+    "top": "Folded top", "bumper_front": "Bumper front", "bumper_rear": "Bumper rear", "grille": "Grille", "headlight": "Headlight",
 }
-_WALKER_SETTINGS = wb.project_settings_text
 PLATE_ORDER = (("gray", "Gray"), ("red", "Red"), ("black", "Black"))  # フィラメント 1〜3 の順
+# 部品どうしの間隔 [mm]。サポートは部品の輪郭より外へ広がるので、サポートの要る部品のプレートは広く空ける
+PLATE_GAP = {False: 5.0, True: 20.0}
+# サポートは要るが、サポートなしのプレートに載せる部品(ハットだけで 1 枚使うのを避ける。サポートは全体設定の
+# 「重要な領域のみ」で付く。ユーザーが Bambu Studio で並べ替えた配置に合わせた)
+PLAIN_PLATE = {"hat"}
 
 
 def print_shape(key: str):
@@ -93,8 +104,23 @@ def bed_contact(mesh) -> float:
     return float(mesh.area_faces[(n[:, 2] < -0.99) & (ctr[:, 2] < 0.05)].sum())
 
 
+def import_reference_settings(reference: Path) -> None:
+    """Bambu Studio が保存した P2S のプロジェクトから、プロジェクト設定をそのまま P2S_SETTINGS に写す。
+
+    純正プリセットを継承で解決しただけの設定は、Studio が保存時に足す項目(nozzle_volume_type、filament_map など
+    約 190 個)が欠けていて、Studio 02.09 で開けなかった。そのため Studio 自身が書いた設定を正本にする。
+    """
+    import zipfile
+
+    with zipfile.ZipFile(reference) as archive:
+        settings = json.loads(archive.read("Metadata/project_settings.config"))
+    if settings.get("printer_model") != "Bambu Lab P2S" or settings.get("printable_area") != ["0x0", f"{BED:g}x0", f"{BED:g}x{BED:g}", f"0x{BED:g}"]:
+        raise SystemExit(f"P2S の設定ではない: {settings.get('printer_model')} {settings.get('printable_area')}")
+    P2S_SETTINGS.write_text(json.dumps(settings, ensure_ascii=False, indent=4), encoding="utf-8")
+
+
 def _project_settings_text() -> str:
-    settings = json.loads(_WALKER_SETTINGS())
+    settings = json.loads(P2S_SETTINGS.read_text(encoding="utf-8"))
     colours = [c.COLORS[role].upper() for role, _ in PLATE_ORDER]
     settings["filament_colour"] = settings["filament_multi_colour"] = colours
     settings["filament_colour_type"] = ["1"] * len(colours)
@@ -102,26 +128,35 @@ def _project_settings_text() -> str:
 
 
 def write_plates(defs, shapes, meshes) -> list[dict]:
-    """色ごとにベッドへ輪郭で詰め、全プレートを 1 つの 3MF に書く(walker/build.py の詰め方と書き方を使う)。"""
+    """色とサポートの要否ごとにベッドへ輪郭で詰め、全プレートを 1 つの 3MF に書く(walker/build.py の詰め方と書き方を使う)。
+
+    サポートの要る部品は別のプレートにまとめ、間隔を PLATE_GAP[True] に広げる(PLAIN_PLATE の部品は除く)。
+    サポートは全体設定(car/bambu_p2s_settings.json)でオン、「重要な領域のみ」。
+    """
     out_dir = c.OUT / "3mf"
     out_dir.mkdir(parents=True, exist_ok=True)
     plates, result = [], []
     for slot, (role, plate_name) in enumerate(PLATE_ORDER, start=1):
-        items = {}
-        for key, part in defs.items():
-            if key in shapes and part.color == c.COLORS[role]:
-                mask = wb._footprint(shapes[key])
-                for _ in range(part.count):
-                    items[len(items)] = (key, mask)
-        packed = wb.nest(items)
-        for number, plate in enumerate(packed, start=1):
-            name = f"{plate_name}" + (f" {number}" if len(packed) > 1 else "") + f" {c.COLORS[role]}"
-            plates.append((name, slot, [(ENGLISH_NAMES[key], meshes[key], k, x, y, shapes[key]) for key, k, x, y in plate]))
-            counts = {}
-            for key, *_ in plate:
-                counts[key] = counts.get(key, 0) + 1
-            result.append(dict(plate=len(plates), name=name, color=role, parts=len(plate), contents=counts))
-    wb.project_settings_text = _project_settings_text  # フィラメントの色だけ車の色にする(他の設定は walker と同じ A1 mini 用)
+        for support in (False, True):
+            items = {}
+            for key, part in defs.items():
+                if key in shapes and part.color == c.COLORS[role] and (PRINT_POSE[key][2] and key not in PLAIN_PLATE) == support:
+                    mask = wb._footprint(shapes[key])
+                    for _ in range(part.count):
+                        items[len(items)] = (key, mask)
+            if not items:
+                continue
+            wb.PLATE_GAP = PLATE_GAP[support]
+            packed = wb.nest(items)
+            for number, plate in enumerate(packed, start=1):
+                name = f"{plate_name}" + (" support" if support else "") + (f" {number}" if len(packed) > 1 else "") + f" {c.COLORS[role]}"
+                plates.append((name, slot, [(ENGLISH_NAMES[key], meshes[key], k, x, y, shapes[key]) for key, k, x, y in plate]))
+                counts = {}
+                for key, *_ in plate:
+                    counts[key] = counts.get(key, 0) + 1
+                result.append(dict(plate=len(plates), name=name, color=role, support=support, parts=len(plate), contents=counts))
+    wb.project_settings_text = _project_settings_text  # Studio が保存した P2S の設定のまま、フィラメントの色だけ車の色にする
+    wb.BS_VERSION = json.loads(P2S_SETTINGS.read_text(encoding="utf-8"))["version"]  # 3MF の Application の版を、設定を保存した Studio にそろえる
     path = out_dir / "stackchan_car.3mf"
     path.unlink(missing_ok=True)
     wb.write_bambu_project(path, plates)
@@ -129,6 +164,11 @@ def write_plates(defs, shapes, meshes) -> list[dict]:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--reference", type=Path, help="Bambu Studio で P2S を選んで保存した 3MF(設定の正本を取り替えるとき)")
+    args = parser.parse_args()
+    if args.reference:
+        import_reference_settings(args.reference)
     out = c.OUT / "stl"
     out.mkdir(parents=True, exist_ok=True)
     for old in out.glob("*.stl"):  # このスクリプトの出力だけが入るフォルダ。名前の変わった部品の古いファイルを残さない

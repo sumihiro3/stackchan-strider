@@ -134,10 +134,73 @@ def shell(points, radius: float) -> Manifold:
 
 ENGRAVE = 0.9  # 溝の深さ(肉厚 SKIN の半分弱)
 
+# ---- はめ込み(接着を使わない留め方)
+PRESS_FIT = 0.05  # 差し込みのピンと穴の半径すきま。FDM の穴は小さめに出るので、実物では軽い締まりばめになる
+SNAP_CLEAR = 0.2  # スナップのツメと角穴のすきま(片側)。返し(SNAP_BARB 0.5)との差 0.3 が掛かり
+HOOD_SNAP_X = 26.0  # ボンネットのツメの |x|。横棒と側板の台の床を上から貫く
+HOOD_BLOCK = (23.0, 29.5, 14.0)  # ボンネットの内壁から横棒の上へ下ろすブロックの x と上端(下端は横棒の上面 + 0.2)
+LIP_LEN, LIP_T = 6.0, 1.6  # 前のボディの後ろ端の舌(後ろのボディの内面の内側へ入る)
+DETENT = dict(y=36.5, z=18.0, r=1.5, h=0.7, pad_x1=53.7)  # 後ろのボディの内壁の出っぱりと、側板の台の穴
+FENDER_PEG_R, FENDER_PEG_DEG = 1.0, (30.0, 90.0, 150.0)  # 後ろのフェンダーのピン(ボディの横の壁に差す)
+FF_TENON_X, FF_PAD_Z = 7.5, (31.5, 34.0)  # 前のフェンダーのツメ(ナックルのローカル x)と、支柱の上の台の上下
+FF_STRUT_X = (2.5, 4.5)  # 支柱の x(ナックルのローカル。ツメの返し 6.3〜8.7 より内側)
+BUMPER_STAY_X = 14.0  # バンパーの腕の |x|
+BUMPER_F_POS, BUMPER_R_POS = (HOOD_NOSE_Y + 5.0, 0.0), (BODY_REAR_Y - 6.5, 6.0)  # 後ろはツメの返しがボディの底の丸みに当たらない高さ。両端の回り込みがボディの角に当たらない位置  # バンパーの中心 (y, z)
+BUMPER_R_STAY_Y1 = -61.0  # 後ろのバンパーの腕の先(ボディの背面の手前)
+BUMPER_R_BOSS_Y = -54.0  # 後ろのボディの背面の内側の台の内面(ツメの返しが掛かる)
+WINDSHIELD_PEG = dict(x=41.0, r=1.0, depth=4.0)  # 枠の縦の辺(下の辺はカウルの曲面で切れて残らない)
+TOP_PEG = dict(x=28.0, y=-43.0, r=1.0, h=3.5)
+MOLDING_KEY = 0.6  # モールの裏の帯がボディの溝に入る深さ
+
 
 def engrave(body: Manifold, cutter: Manifold, outer: Manifold, inner: Manifold) -> Manifold:
     """外面から ENGRAVE だけの層(outer - inner)と cutter の重なりを削る。cutter は溝を外面に投影する柱。"""
     return body - (cutter ^ (outer - inner))
+
+
+def _frame(origin, direction, width_axis) -> np.ndarray:
+    """ローカル y を direction、x を width_axis、原点を origin に置く行列。"""
+    y = np.asarray(direction, float)
+    y /= np.linalg.norm(y)
+    x = np.asarray(width_axis, float)
+    x = x - x.dot(y) * y
+    x /= np.linalg.norm(x)
+    m = np.eye(4)
+    m[:3, 0], m[:3, 1], m[:3, 2], m[:3, 3] = x, y, np.cross(x, y), origin
+    return m
+
+
+def snap_tenon(origin, direction, width_axis, length: float, width: float = 5.0, thick: float = 3.0) -> Manifold:
+    """2 本爪のスナップのツメ(walker の _snap_tenon)。根元 origin から direction へ length 先の面の裏に返しが掛かる。
+
+    爪は width_axis の向きに開く。印刷の層の中で開くように向きを選ぶ(層をまたいで曲げると折れやすい)。
+    """
+    profile = d._snap_tenon(width, length, length + 1.8)  # 割りは根元の 1 mm 手前まで
+    return apply(profile.extrude(thick).translate((0, 0, -thick / 2)), _frame(origin, direction, width_axis))
+
+
+def snap_hole(origin, direction, width_axis, depth0: float, depth1: float, width: float = 5.0, thick: float = 3.0) -> Manifold:
+    """snap_tenon の通る角穴(根元から depth0〜depth1 の範囲)。"""
+    w, t = width / 2 + SNAP_CLEAR, thick / 2 + SNAP_CLEAR
+    return apply(box(-w, w, depth0, depth1, -t, t), _frame(origin, direction, width_axis))
+
+
+def _dome(x_face: float, y: float, z: float, r: float, h: float, inward: float) -> Manifold:
+    """x = x_face の面から inward(±1)の向きに高さ h だけ出る、底の半径 r の丸い出っぱり。"""
+    rs = (r * r + h * h) / (2 * h)
+    sphere = Manifold.sphere(rs, 48).translate((x_face + inward * (h - rs), y, z))
+    lo, hi = sorted((x_face - inward * 0.05, x_face + inward * h))
+    return sphere ^ box(lo, hi, y - r - 1, y + r + 1, z - r - 1, z + r + 1)
+
+
+def _largest(shape: Manifold) -> Manifold:
+    """いちばん大きいつながった塊だけを残す(切り欠きで離れた薄い切れ端を、印刷物に残さない)。"""
+    return max(shape.decompose(), key=lambda m: m.volume())
+
+
+def _top_z(outer: Manifold, x: float, y: float) -> float:
+    """外形 outer の (x, y) での上面の高さ。"""
+    return (outer ^ cyl(0.05, -50.0, 120.0, 8).translate((x, y, 0))).bounding_box()[5]
 
 
 def _crowned(x0: float, x1: float, r_in: float, t: float, crown: float, steps: int = 12) -> list[tuple[float, float]]:
@@ -189,7 +252,25 @@ def rail_part() -> Manifold:
     seat = box(RAIL_FRONT_X[0] - 3.0, RAIL_FRONT_X[1], WHEELBASE - 7.0, WHEELBASE + 7.0, RAIL_BEAM_Z[0], RAIL_BEAM_Z[1])
     # 横棒が上から落ちる溝
     notch = box(RAIL_FRONT_X[0] - 4.0, RAIL_FRONT_X[1] + 1.0, WHEELBASE - BOSS_R - 0.15, WHEELBASE + BOSS_R + 0.15, BEAM_Z[0] - 0.15, BEAM_Z[1] + 1.0)
-    return rear + beam + seat - notch
+    rail = rear + beam + seat - notch
+    rail -= hood_snap_hole()
+    dt = DETENT
+    rail += box(d.PLATE_OUT - 0.01, dt["pad_x1"], dt["y"] - 2.5, dt["y"] + 2.5, dt["z"] - 4.0, dt["z"] + 4.0)
+    rail += box(d.PLATE_OUT - 0.01, dt["pad_x1"], -dt["y"] - 2.5, -dt["y"] + 2.5, dt["z"] - 4.0, dt["z"] + 4.0)
+    for sy in (1, -1):
+        rail -= cyl_x(dt["r"] + 0.1, d.PLATE_OUT, dt["pad_x1"] + 1.0, sy * dt["y"], dt["z"])
+    return rail
+
+
+def _hood_snap_frame(sx: float = 1.0):
+    return (sx * HOOD_SNAP_X, WHEELBASE, BEAM_Z[1] + 0.2), (0, 0, -1), (1, 0, 0)
+
+
+HOOD_SNAP_LEN = BEAM_Z[1] + 0.2 - RAIL_BEAM_Z[0] + 0.2  # ブロックの下面から側板の台の床の裏まで
+
+
+def hood_snap_hole(sx: float = 1.0) -> Manifold:
+    return snap_hole(*_hood_snap_frame(sx), -1.0, HOOD_SNAP_LEN + 4.0)
 
 
 @lru_cache(maxsize=None)
@@ -198,6 +279,8 @@ def beam_part() -> Manifold:
     bar = hull2(circle(BOSS_R, -KINGPIN_X, 0), circle(BOSS_R, KINGPIN_X, 0)).extrude(BEAM_Z[1] - BEAM_Z[0]).translate((0, WHEELBASE, BEAM_Z[0]))
     for sx in (1, -1):
         bar -= cyl(d.STUD_R + HOLE_FIT, BEAM_Z[0] - 1, BEAM_Z[1] + 1).translate((sx * KINGPIN_X, WHEELBASE, 0))
+        bar -= hood_snap_hole(sx)
+        bar -= snap_hole(*_bumper_f_snap_frame(sx), -1.0, 20.0)
     return bar
 
 
@@ -211,7 +294,10 @@ def knuckle_part() -> Manifold:
     kx = KINGPIN_X
     arm = hull2(circle(BOSS_R, 0, 0), circle(3.0, UPRIGHT_X[1] - kx - 3.0, 0)).extrude(KNUCKLE_Z[1] - KNUCKLE_Z[0]).translate((0, 0, KNUCKLE_Z[0]))
     upright = box(UPRIGHT_X[0] - kx, UPRIGHT_X[1] - kx, -5.0, 5.0, -8.0, KNUCKLE_Z[1])
-    strut = box(UPRIGHT_X[0] - kx, UPRIGHT_X[1] - kx, -4.0, 4.0, KNUCKLE_Z[1] - 1.0, FENDER_R - 0.1)
+    # 支柱は腕の上から立てる(縦板の真上だと、前のフェンダーのツメの返しが当たる)
+    strut = box(FF_STRUT_X[0], FF_STRUT_X[1], -4.0, 4.0, KNUCKLE_Z[1] - 1.0, FF_PAD_Z[1])
+    strut += box(FF_STRUT_X[0], FF_TENON_X + 3.0, -5.0, 5.0, *FF_PAD_Z)  # 前のフェンダーを留める台(タイヤの上 1.5 mm)
+    strut -= snap_hole(*_ff_snap_frame(), -1.0, 10.0, thick=2.4)
     stub = cyl_x(STUB_R, UPRIGHT_X[1] - kx - 0.01, WHEEL_X0 - kx + FRONT_BORE_X1 - 0.2)
     # 先は細い溝つきピン(walker と同じ太さ)。ホイールの壁を貫き、外で C クリップが抜けを止める
     stub += apply(d.grooved_pin(FRONT_BORE_X1 - 0.2, FRONT_CLIP_CLEAR), AXIS_Z_TO_X).translate((WHEEL_X0 - kx, 0, 0))
@@ -230,6 +316,14 @@ def knuckle_right_part() -> Manifold:
     drag = hull2(circle(3.5, 0, 0), circle(3.5, -DRAG_ARM, 0)).extrude(KNUCKLE_Z[1] - KNUCKLE_Z[0]).translate((0, 0, KNUCKLE_Z[0]))
     drag += d.grooved_pin(KNUCKLE_Z[1], DRAG_PIN_CLEAR).translate((-DRAG_ARM, 0, 0))
     return knuckle_part() + drag
+
+
+def _ff_snap_frame():
+    """前のフェンダーのツメ(ナックルのローカル)。フェンダーの内面から下へ、支柱の上の台を貫く。爪は前後に開く。"""
+    return (FF_TENON_X, 0.0, FENDER_R), (0, 0, -1), (0, 1, 0)
+
+
+FF_SNAP_LEN = FENDER_R - FF_PAD_Z[0] + 0.2
 
 
 FRONT_CLIP_CLEAR = FRONT_WALL_X1 + 0.1 - (FRONT_BORE_X1 - 0.2)  # ピンの根元から溝まで
@@ -329,7 +423,24 @@ def body_rear_part() -> Manifold:
     body = engrave(body, cutter, blob(pts, r), blob(pts, r, ENGRAVE))
     for sx in (1, -1):
         body += Manifold.batch_hull([_ball(sx * (BODY_HALF_W - 0.5), y, DOOR_HANDLE_Z, 1.3) for y in (y1 - 9.0, y1 - 3.0)])
-    return body - rails_clearance()
+    outer = blob(pts, r)
+    for sx in (1, -1):
+        # 後ろのバンパーのツメを受ける台(背面の内側。内面が縦なので返しが掛かる)
+        body += box(sx * BUMPER_STAY_X - 5.0, sx * BUMPER_STAY_X + 5.0, BODY_REAR_Y - 1.0, BUMPER_R_BOSS_Y, BODY_BOTTOM_Z + SKIN + 0.2, 8.0) ^ outer
+        body -= snap_hole(*_bumper_r_snap_frame(sx), -2.0, 12.0)
+        for deg in FENDER_PEG_DEG:
+            a = math.radians(deg)
+            body -= cyl_x(FENDER_PEG_R + PRESS_FIT, sx * 50.0 if sx > 0 else -60.0, 60.0 if sx > 0 else -50.0,
+                          (FENDER_R + FENDER_T / 2) * math.cos(a), (FENDER_R + FENDER_T / 2) * math.sin(a))
+        tz = _top_z(outer, sx * TOP_PEG["x"], TOP_PEG["y"])
+        body += cyl(TOP_PEG["r"], tz - 1.5, tz + TOP_PEG["h"]).translate((sx * TOP_PEG["x"], TOP_PEG["y"], 0))
+    body -= molding_body_groove()
+    body -= rails_clearance()
+    dt = DETENT
+    for sx in (1, -1):
+        for sy in (1, -1):
+            body += _dome(sx * (BODY_HALF_W - SKIN), sy * dt["y"], dt["z"], dt["r"], dt["h"], -sx)
+    return _largest(body)
 
 
 def _front_points():
@@ -355,11 +466,26 @@ def body_front_part() -> Manifold:
     body -= box(-HOOD_HALF_W - 1, HOOD_HALF_W + 1, WHEELBASE + TIE_ARM - 8.0, WHEELBASE + TIE_ARM + 8.0, BODY_BOTTOM_Z - 1, TIE_Z[1] + 1.5)
     # 運転席側は開ける(後ろのボディの開口とつなぐ)
     c = COCKPIT
-    body -= box(-c["half_w"], c["half_w"], BODY_SPLIT_Y - 20, BODY_SPLIT_Y + 1.0, 30.0, 80.0)
-    # グリルとヘッドライトは、穴にはめる(穴の形 = 部品の形)
+    body -= box(-c["half_w"], c["half_w"], BODY_SPLIT_Y - 20, BODY_SPLIT_Y, 30.0, 80.0)
+    # グリルとヘッドライトは、穴に差し込む(穴は部品より PRESS_FIT だけ大きい)
     body -= apply(grille_outline(), GRILLE_POSE)
     for pose in HEADLIGHT_POSES:
-        body -= apply(headlight_part(), pose)
+        body -= apply(headlight_socket(), pose)
+    # 後ろの端の舌: 後ろのボディの内面の内側へ入り、後ろのボディをかぶせると押さえられる
+    rear_pts, r = _rear_points()
+    z_low = BODY_BOTTOM_Z + SKIN + 0.2
+    lip = (blob(rear_pts, r, SKIN + 0.2) - blob(rear_pts, r, SKIN + 0.2 + LIP_T)) ^ box(-80, 80, BODY_SPLIT_Y - LIP_LEN, BODY_SPLIT_Y + 0.01, z_low, 80)
+    lip += (blob(rear_pts, r, 0.5) - blob(rear_pts, r, SKIN + 0.2 + LIP_T)) ^ box(-80, 80, BODY_SPLIT_Y, BODY_SPLIT_Y + 1.5, z_low, 80)
+    lip -= box(-c["half_w"], c["half_w"], BODY_SPLIT_Y - 20, BODY_SPLIT_Y + 2.0, 30.0, 80.0)  # 運転席の開口
+    inner_x, inner_z = BODY_HALF_W - SKIN - LIP_T - 1.0, DECK_TOP_Z - SKIN - LIP_T - 1.0
+    lip -= box(-inner_x, inner_x, BODY_SPLIT_Y - 20, BODY_SPLIT_Y + 2.0, -20.0, inner_z)  # 底の面は要らない(横と上の壁だけ)
+    body += lip
+    # 横棒の上へ下ろすブロック(ボンネットの内壁から)
+    x0, x1, z1 = HOOD_BLOCK
+    for sx in (1, -1):
+        block = box(x0, x1, WHEELBASE - 5.0, WHEELBASE + 5.0, BEAM_Z[1] + 0.2, z1)
+        body += block if sx > 0 else block.mirror((1, 0, 0))
+        body -= cyl(WINDSHIELD_PEG["r"] + PRESS_FIT, DECK_TOP_Z - WINDSHIELD_PEG["depth"] - 0.5, DECK_TOP_Z + 1.0).translate((sx * WINDSHIELD_PEG["x"], WINDSHIELD_Y, 0))
     # 空気取り(ボンネットの横の縦溝)と、ボンネットの中央の合わせ目
     cutter = Manifold()
     for y in LOUVER_Y:
@@ -370,8 +496,12 @@ def body_front_part() -> Manifold:
     inner = blob(cowl, r_c, ENGRAVE) + blob(hood, r_h, ENGRAVE)
     body = engrave(body, cutter, outer, inner)
     for sx in (1, -1):
-        body -= cyl(MIRROR_PEG_R + HOLE_FIT, 20.0, 60.0).translate((sx * MIRROR_XY[0], MIRROR_XY[1], 0))
-    return body - rails_clearance()
+        body -= cyl(MIRROR_PEG_R + PRESS_FIT, 20.0, 60.0).translate((sx * MIRROR_XY[0], MIRROR_XY[1], 0))
+    body -= molding_body_groove() + molding_hood_groove()
+    body -= rails_clearance()
+    for sx in (1, -1):
+        body += snap_tenon(*_hood_snap_frame(sx), HOOD_SNAP_LEN + 0.1).translate((0, 0, 0.1))  # 横棒と側板の台の床を貫いて、返しが側板の下に掛かる
+    return _largest(body)
 
 
 @lru_cache(maxsize=None)
@@ -396,14 +526,21 @@ def body_front_outer() -> Manifold:
 def fender_rear_part() -> Manifold:
     """右後ろのフェンダー(ローカル: 後輪の軸 = X 軸、原点 = 軸心)。"""
     section = _crowned(*FENDER_X, FENDER_R, FENDER_T, 2.0)
-    return ring_sector_x(section, *REAR_FENDER_DEG)
+    fender = ring_sector_x(section, *REAR_FENDER_DEG)
+    rm = FENDER_R + FENDER_T / 2
+    for deg in FENDER_PEG_DEG:  # 内側の縁から、ボディの横の壁に差すピン
+        a = math.radians(deg)
+        fender += cyl_x(FENDER_PEG_R, FENDER_X[0] - 3.0, FENDER_X[0] + 0.01, rm * math.cos(a), rm * math.sin(a))
+    return fender
 
 
 @lru_cache(maxsize=None)
 def fender_front_part() -> Manifold:
     """右前のサイクルフェンダー(ローカル: ナックルと同じ。キングピンの軸 = Z)。"""
     section = _crowned(*FENDER_X, FENDER_R, FENDER_T, 2.0)
-    return ring_sector_x(section, *FRONT_FENDER_DEG).translate((-KINGPIN_X, 0, 0))
+    fender = ring_sector_x(section, *FRONT_FENDER_DEG).translate((-KINGPIN_X, 0, 0))
+    tenon = snap_tenon(*_ff_snap_frame(), FF_SNAP_LEN, thick=2.4).trim_by_plane((1, 0, 0), FENDER_X[0] - KINGPIN_X)  # 縁から出さない(内側の縁を下にして印刷する)
+    return fender + tenon  # 支柱の上の台を貫く
 
 
 # ---------------------------------------------------------------- 小物(グレー)
@@ -415,7 +552,13 @@ def windshield_part() -> Manifold:
     frame = frame.offset(3.0, d.JoinType.Round) - CrossSection.square((2 * half - 6, z1 - z0 - 4)).translate((-half + 3, z0 + 3)).offset(2.0, d.JoinType.Round)
     plate = frame.extrude(2.4)
     plate = plate.transform(np.array([[1, 0, 0, 0], [0, 0, 1, BODY_SPLIT_Y + 1.0], [0, 1, 0, 0]], dtype=np.float64))
-    return plate - body_front_outer()  # 根元をカウルの曲面に合わせる
+    plate -= body_front_outer()  # 根元をカウルの曲面に合わせる
+    for sx in (1, -1):  # カウルの上面の穴に差すピン
+        plate += cyl(WINDSHIELD_PEG["r"], DECK_TOP_Z - WINDSHIELD_PEG["depth"], DECK_TOP_Z + 0.5).translate((sx * WINDSHIELD_PEG["x"], WINDSHIELD_Y, 0))
+    return plate
+
+
+WINDSHIELD_Y = BODY_SPLIT_Y + 1.0 + 1.2  # 風防の板の厚みの中央
 
 
 @lru_cache(maxsize=None)
@@ -425,17 +568,55 @@ def top_part() -> Manifold:
     roll = Manifold.batch_hull([_ball(sx * 40.0, y, z, 8.0) for sx in (1, -1)] + [_ball(sx * 36.0, y - 6.0, z - 2.0, 6.5) for sx in (1, -1)])
     for x in (-24.0, 0.0, 24.0):  # たたんだ骨
         roll -= box(x - 0.6, x + 0.6, y - 20, y + 20, z + 5.5, z + 20)
-    return roll.trim_by_plane((0, 0, 1), DECK_TOP_Z - 3.0) - body_rear_outer()  # 下面を甲板の曲面に合わせる
+    roll = roll.trim_by_plane((0, 0, 1), DECK_TOP_Z - 3.0) - body_rear_outer()  # 下面を甲板の曲面に合わせる
+    for sx in (1, -1):  # 甲板のピンが入る穴
+        tz = _top_z(body_rear_outer(), sx * TOP_PEG["x"], TOP_PEG["y"])
+        roll -= cyl(TOP_PEG["r"] + PRESS_FIT, tz - 1.0, tz + TOP_PEG["h"] + 0.5).translate((sx * TOP_PEG["x"], TOP_PEG["y"], 0))
+    return roll
 
 
-@lru_cache(maxsize=None)
-def bumper_part() -> Manifold:
-    """前のバンパー(後ろは同じ部品を Z まわり 180°)。両端が少し後ろへ回り込む。"""
+def _bumper_bar() -> Manifold:
+    """バンパーの棒(ローカル: 中心が原点、両端が -y へ少し回り込む)。"""
     pts = [(sx * 42.0, 0.0, 0.0) for sx in (1, -1)]
     bar = Manifold.batch_hull([_ball(x, y, z, 3.2) for x, y, z in pts])
     for sx in (1, -1):
         bar += Manifold.batch_hull([_ball(sx * 42.0, 0, 0, 3.2), _ball(sx * 45.0, -6.0, 0, 3.2)])
     return bar
+
+
+STAY_Z = (-3.2, -0.2)  # バンパーの腕の上下(棒の中心から。下面を棒の下端にそろえ、下を平らにして印刷する)
+
+
+def _bumper_f_snap_frame(sx: float = 1.0):
+    y, z = BUMPER_F_POS
+    return (sx * BUMPER_STAY_X, WHEELBASE + 5.0 + 0.2, z + sum(STAY_Z) / 2), (0, -1, 0), (1, 0, 0)
+
+
+def _bumper_r_snap_frame(sx: float = 1.0):
+    y, z = BUMPER_R_POS
+    return (sx * BUMPER_STAY_X, BUMPER_R_STAY_Y1, z + sum(STAY_Z) / 2), (0, 1, 0), (1, 0, 0)
+
+
+@lru_cache(maxsize=None)
+def bumper_front_part() -> Manifold:
+    """前のバンパー(設計の座標)。腕 2 本がボンネットの下を後ろへ伸び、先のツメが横棒を前から貫く。"""
+    y, z = BUMPER_F_POS
+    part = _bumper_bar().translate((0, y, z))
+    for sx in (1, -1):
+        part += box(sx * BUMPER_STAY_X - 2.5, sx * BUMPER_STAY_X + 2.5, WHEELBASE + 5.2, y, z + STAY_Z[0], z + STAY_Z[1])
+        part += snap_tenon(*_bumper_f_snap_frame(sx), 10.0 + 0.2 + 0.2)
+    return part
+
+
+@lru_cache(maxsize=None)
+def bumper_rear_part() -> Manifold:
+    """後ろのバンパー(設計の座標)。短い腕 2 本の先のツメが、後ろのボディの背面と内側の台を貫く。"""
+    y, z = BUMPER_R_POS
+    part = _bumper_bar().mirror((0, 1, 0)).translate((0, y, z))
+    for sx in (1, -1):
+        part += box(sx * BUMPER_STAY_X - 2.5, sx * BUMPER_STAY_X + 2.5, y, BUMPER_R_STAY_Y1, z + STAY_Z[0], z + STAY_Z[1])
+        part += snap_tenon(*_bumper_r_snap_frame(sx), BUMPER_R_BOSS_Y - BUMPER_R_STAY_Y1 + 0.2)
+    return part
 
 
 def _shield(grow: float = 0.0) -> CrossSection:
@@ -453,7 +634,7 @@ def _shield_prism(y0: float, y1: float, grow: float = 0.0) -> Manifold:
 
 def grille_outline() -> Manifold:
     """グリルの穴(ボディから抜く形)。"""
-    return _shield_prism(-12.0, 4.0)
+    return _shield_prism(-12.0, 4.0, PRESS_FIT)
 
 
 @lru_cache(maxsize=None)
@@ -482,6 +663,12 @@ def headlight_part() -> Manifold:
     stalk = Manifold.cylinder(12.0, 2.2, 2.2, 32).transform(to_y).translate((0, -12.0, 0))  # 後ろへ伸びてボンネットの穴に差す
     rim = Manifold.revolve(circle(0.9, 6.3, 0.0), 64).transform(to_y).translate((0, 6.0, 0))  # レンズの縁
     return pod + stalk + rim
+
+
+@lru_cache(maxsize=None)
+def headlight_socket() -> Manifold:
+    """ヘッドライトを差す穴(部品を PRESS_FIT だけ太らせた形)。"""
+    return headlight_part().minkowski_sum(Manifold.cube((2 * PRESS_FIT,) * 3, True))
 
 
 MIRROR_PEG_R = 1.5
@@ -520,7 +707,21 @@ def molding_body_part() -> Manifold:
     (cowl, r_c), _ = _front_points()
     grown = blob(rear_pts, r, -MOLDING_T) + blob(cowl, r_c, -MOLDING_T)
     band = grown - body_rear_outer() - body_front_outer()
-    return band ^ box(30.0, 70.0, BODY_REAR_Y + 10.0, COWL_Y1, MOLDING_Z, MOLDING_Z + MOLDING_W)
+    return (band ^ _molding_body_strip()) + molding_body_groove(right_only=True)
+
+
+def _molding_body_strip() -> Manifold:
+    return box(30.0, 70.0, BODY_REAR_Y + 10.0, COWL_Y1, MOLDING_Z, MOLDING_Z + MOLDING_W)
+
+
+@lru_cache(maxsize=None)
+def molding_body_groove(right_only: bool = False) -> Manifold:
+    """横のモールの裏の帯 = ボディの溝(外面から MOLDING_KEY の深さ、モールと同じ幅)。"""
+    rear_pts, r = _rear_points()
+    (cowl, r_c), _ = _front_points()
+    skin = (blob(rear_pts, r, -0.05) + blob(cowl, r_c, -0.05)) - (blob(rear_pts, r, MOLDING_KEY) + blob(cowl, r_c, MOLDING_KEY))  # 外へ 0.05 出して表の帯とつなぐ
+    groove = skin ^ _molding_body_strip()
+    return groove if right_only else groove + groove.mirror((1, 0, 0))
 
 
 @lru_cache(maxsize=None)
@@ -529,8 +730,19 @@ def molding_hood_part() -> Manifold:
     _, (hood, r_h) = _front_points()
     band = blob(hood, r_h, -MOLDING_T) - body_front_outer()
     (y0, y1), (z0, z1) = HOOD_MOLDING_Y, HOOD_MOLDING_Z
-    strip = plate_yz(polygon([(y0, z0), (y1, z1), (y1, z1 + MOLDING_W), (y0, z0 + MOLDING_W)]), 15.0, 60.0)
-    return band ^ strip
+    return (band ^ _molding_hood_strip()) + molding_hood_groove(right_only=True)
+
+
+def _molding_hood_strip() -> Manifold:
+    (y0, y1), (z0, z1) = HOOD_MOLDING_Y, HOOD_MOLDING_Z
+    return plate_yz(polygon([(y0, z0), (y1, z1), (y1, z1 + MOLDING_W), (y0, z0 + MOLDING_W)]), 15.0, 60.0)
+
+
+@lru_cache(maxsize=None)
+def molding_hood_groove(right_only: bool = False) -> Manifold:
+    _, (hood, r_h) = _front_points()
+    groove = (blob(hood, r_h, -0.05) - blob(hood, r_h, MOLDING_KEY)) ^ _molding_hood_strip()
+    return groove if right_only else groove + groove.mirror((1, 0, 0))
 
 
 # ---------------------------------------------------------------- ハットとかじ取り
@@ -816,7 +1028,8 @@ def part_defs() -> dict[str, PartDef]:
         PartDef("mirror_L", "左のフェンダーミラー", lambda: mirror_part().mirror((1, 0, 0)), c["gray"], 1),
         PartDef("windshield", "風防の枠", windshield_part, c["gray"], 1),
         PartDef("top", "たたんだ幌", top_part, c["gray"], 1),
-        PartDef("bumper", "バンパー", bumper_part, c["gray"], 2),
+        PartDef("bumper_front", "前のバンパー", bumper_front_part, c["gray"], 1),
+        PartDef("bumper_rear", "後ろのバンパー", bumper_rear_part, c["gray"], 1),
         PartDef("grille", "グリル", grille_part, c["gray"], 1),
         PartDef("headlight", "ヘッドライト", headlight_part, c["gray"], 2),
         PartDef("sc_base", "スタックチャン土台", d.stackchan_base, sc["base"], 1, printable=False),
@@ -851,8 +1064,8 @@ def instances(drive: float = 0.0, head_pitch: float | None = None, with_stackcha
                                                     "molding_body_R", "molding_body_L", "molding_hood_R", "molding_hood_L", "mirror_R", "mirror_L")]
     out += [Instance("fender_rear_R", "fender_rear_R", eye, "chassis"), Instance("fender_rear_L", "fender_rear_L", eye, "chassis")]
     out += [
-        Instance("bumper_F", "bumper", translation(0, HOOD_NOSE_Y + 5.0, 4.0), "chassis"),
-        Instance("bumper_R", "bumper", translation(0, BODY_REAR_Y - 5.0, 4.0) @ d.ROT180_Z, "chassis"),
+        Instance("bumper_front", "bumper_front", eye, "chassis"),
+        Instance("bumper_rear", "bumper_rear", eye, "chassis"),
         Instance("grille", "grille", GRILLE_POSE, "chassis"),
     ]
     for pose, tag in zip(HEADLIGHT_POSES, ("R", "L")):
