@@ -440,11 +440,11 @@
    "size_mm": [
     140.0,
     63.5,
-    161.0
+    159.5
    ],
-   "volume_cm3": 61.46,
-   "overhang_mm2": 9302.1,
-   "bed_mm2": 81.1,
+   "volume_cm3": 61.33,
+   "overhang_mm2": 6534.4,
+   "bed_mm2": 2872.2,
    "orientation": "後ろの面を下",
    "support": true,
    "watertight": true,

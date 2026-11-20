@@ -41,7 +41,8 @@ VIEWS = {  # render_car.py のカメラ(位置 [mm]、注視点 [mm])
 # ---------------------------------------------------------------- 殻の寸法
 SIDE_X = 56.0  # 横の壁の外面 |x|(後輪の内面 58 の内側。側板の台の出っぱりを受ける)
 BELT_Z = 50.0  # 窓の下の線(頭の下端 43.5 を隠す)
-REAR_Y = -53.0  # 後ろの端
+REAR_Y = -53.0  # 後ろの端(丸い外形の端。実際の背面は REAR_FLAT だけ削った平面)
+REAR_FLAT = 1.5  # 背面を平らに削る深さ。印刷の接地面(約 2800 mm²)になる
 NOSE_Y = 108.0  # 鼻の先(前輪の前端と同じ)
 SHELL_R = 12.0  # 殻の角の丸み
 FRONT_FLOOR_Z = 12.5  # 前輪の間では殻の下をここまで上げる(横棒・ナックル・タイロッドの上)
@@ -171,6 +172,10 @@ def body500_part() -> Manifold:
     """1 体の殻。上は大きく開け(キャンバストップを開けた形)、前輪の振れる範囲と後輪の上をくり抜く。"""
     outer, inner = shell_outer(), shell_inner()
     body = outer - inner
+    # 後ろの面を下にして立てて印刷するので、丸い背面を REAR_FLAT だけ平らに削って接地面にする。
+    # 削る前に内側へ肉を足し、削った後も壁の厚さ SKIN を残す(丸いままだと幅 2 mm の線でしか立たなかった)
+    body += outer ^ box(-80, 80, REAR_Y - 1.0, REAR_Y + REAR_FLAT + SKIN, -20, 80)  # noqa: F405
+    body = body.trim_by_plane((0, 1, 0), REAR_Y + REAR_FLAT)
     body = body.trim_by_plane((0, 0, 1), -6.0 + SKIN + 0.2)  # 底は開ける
     wb = WHEELBASE  # noqa: F405
     body -= box(-80, 80, 40.0, wb + TIE_ARM + 9.0, -20, FRONT_FLOOR_Z)  # noqa: F405  前輪の間は横棒・ナックル・タイロッドの上まで開ける
@@ -215,6 +220,7 @@ def body500_part() -> Manifold:
         ring = circle(3.4, sx * 30.0, 22.0) - circle(2.2, sx * 30.0, 22.0)  # noqa: F405
         cutter += ring.extrude(40.0).transform(np.array([[1, 0, 0, 0], [0, 0, 1, -80.0], [0, 1, 0, 0]], dtype=np.float64))
     body = engrave(body, cutter, outer, blob(*_shell_points(), ENGRAVE))  # noqa: F405
+    body = body.trim_by_plane((0, 1, 0), REAR_Y + REAR_FLAT)  # 後から足した台(バンパーの受け)も背面にそろえる
     body = _largest(body)
     for sx in (1, -1):
         body += snap_tenon(*_hood_snap_frame(sx), HOOD_SNAP_LEN + 0.1).translate((0, 0, 0.1))  # noqa: F405
