@@ -1,9 +1,12 @@
-// Stackchan Strider: M5Stack 製品版スタックチャン(K151)を、首振りサーボの連続回転で歩かせるファームウェア。
+// スタックチャン・カー: M5Stack 製品版スタックチャン(K151)を、車(レトロカー / car500)として走らせるファームウェア。
 //
-//  - 画面はスタックチャンの顔(m5stack-avatar)。歩行中に笑顔にするかは設定で選べる(初期状態は変えない)
-//  - はじめて起動すると設定用の Wi-Fi を出し、画面の QR をスマホで読んで家の Wi-Fi を設定する
-//  - 家の Wi-Fi につながると、画面に操作ページの QR を出す。スマホのブラウザから前進・後退・停止
-//  - 操作ページのボタンを押している間だけ歩く。押している間は 0.3 秒ごとに合図が来て、0.9 秒途切れたら自動で止まる
+//  - 首振り(ヨー)サーボを回し続けて後輪を回し、うなずき(ピッチ)の角度で前輪のかじを切る
+//  - 操作は 2 通り。どちらもスティック 1 本(上下 = 前進・後退と速さ、左右 = かじ)
+//    1. BLE のゲームパッド(左スティック)。スタックチャンに直接つなぐ(gamepad.cpp)
+//    2. スマホのブラウザのジョイスティック。家の Wi-Fi 経由。触れている間は 0.1 秒ごとに値が来て、0.9 秒途切れたら止まる
+//  - うなずきは 0〜30° に必ず収める(car_control.h)。30° を超えると引き棒やフェンダーが当たる
+//  - 画面はスタックチャンの顔(m5stack-avatar)。走っている間に笑顔にするかは設定で選べる
+//  - はじめて起動すると設定用の Wi-Fi を出し、画面の QR をスマホで読んで家の Wi-Fi を設定する(パッドは設定前から使える)
 //
 // 注意: この機体では土台が回り続けるので、首(ヨー)を「角度指定」で動かす命令(goHome / stop / moveX)は使わない。
 //       それらは原点の角度まで首を回そうとして、脚が勝手に動く。止めるときは出力 0 の連続回転(rotateX(0))にする。
@@ -17,18 +20,23 @@
 #include <WebServer.h>
 #include <WiFi.h>
 
+#include <cmath>
+
+#include "car_control.h"
+#include "gamepad.h"
 #include "pages.h"
 
 namespace {
 
-constexpr int SPEED_MIN = 10;  // 速さの下限 [%]
-constexpr int SPEED_MAX = 60;  // 速さの上限 [%]。シミュレーションでは全開だと跳ねて進みが悪い
-constexpr uint32_t COMMAND_TIMEOUT_MS = 900;  // スマホからの合図(0.3 秒ごと)がこの時間途切れたら止める
+constexpr uint32_t COMMAND_TIMEOUT_MS = 900;  // スマホからの値(0.1 秒ごと)がこの時間途切れたら止める
 constexpr uint32_t CONNECT_TIMEOUT_MS = 20000;  // 家の Wi-Fi への接続を待つ時間
 constexpr uint32_t QR_SHOW_MS = 15000;  // 操作ページの QR を出しておく時間
 constexpr uint32_t FORGET_HOLD_MS = 5000;  // 頭の上をこの時間さわり続けると「Wi-Fi の設定を消しますか」を出す
 constexpr uint32_t CONFIRM_SHOW_MS = 10000;  // 確認の画面を出しておく時間。過ぎたら何もせず顔に戻る
-constexpr int PITCH_MAX_DEG = 60;
+constexpr float PITCH_STEP_DEG = 0.5f;  // うなずきは、この角度以上変わったときだけ動かす
+constexpr uint32_t PITCH_INTERVAL_MS = 50;  // うなずきの命令の最短の間隔
+constexpr int PITCH_SPEED = 700;  // movePitch の速さ(0〜1000)
+constexpr uint32_t PAD_BUBBLE_MS = 3000;  // パッドがつながったときの吹き出しを出しておく時間
 const IPAddress SETUP_IP(192, 168, 4, 1);
 const char* const MDNS_NAME = "strider";
 
@@ -42,41 +50,80 @@ m5avatar::Avatar avatar;
 Mode mode = Mode::Setup;
 String setupSsid;  // 設定用 Wi-Fi の名前
 bool invertDirection = false;
-bool smileWhileWalking = false;  // 歩いている間は笑顔にするか(設定で切り替える。初期状態は変えない)
-int driveDirection = 0;  // +1 前進 / -1 後退 / 0 停止
-int driveSpeed = 35;  // [%]
-uint32_t lastCommandMs = 0;
+bool smileWhileWalking = false;  // 走っている間は笑顔にするか(設定で切り替える。初期状態は変えない)
+
+// 操作。最後に動かしたほう(スマホかパッド)の値を使う
+enum class Source { None, Phone, Pad };
+Source activeSource = Source::None;
+int stickX = 0, stickY = 0;  // -100〜100
+int driveSigned = 0;  // 首の回転の速さ [%]。正 = 前進
+float neutralDeg = car::NEUTRAL_CAR500_DEG;  // 直進のうなずきの角度
+float pitchTarget = car::NEUTRAL_CAR500_DEG;
+float pitchSent = -1.0f;  // 最後に送ったうなずきの角度(-1 = まだ送っていない)
+uint32_t pitchSentMs = 0;
+uint32_t lastPhoneMs = 0;
+String stoppedPress;  // 最後に止めた「ひと押し」の番号。これと同じ番号の値は、離したあとに遅れて届いたものなので捨てる
+gamepad::State padState = gamepad::State::Searching;
+uint32_t padBubbleUntilMs = 0;
 uint32_t restartAtMs = 0;  // 0 以外なら、この時刻に再起動する
 uint32_t qrUntilMs = 0;  // 0 以外なら、この時刻まで QR を表示している
 int qrSecondsShown = -1;  // QR の画面にいま出している残り秒数(-1 = まだ出していない)
 uint32_t confirmUntilMs = 0;  // 0 以外なら、この時刻まで「Wi-Fi の設定を消しますか」を表示している
 bool avatarRunning = false;
 
-// ---------------------------------------------------------------- 歩行
+// ---------------------------------------------------------------- 走る・曲がる
 void applyDrive() {
-    if (driveDirection == 0) {
-        M5StackChan.Motion.rotateX(0);
-        return;
-    }
-    const int sign = (invertDirection ? -1 : 1) * driveDirection;
-    M5StackChan.Motion.rotateX(sign * driveSpeed * 10);  // 速さ % → -1000〜1000
+    const int sign = invertDirection ? -1 : 1;
+    M5StackChan.Motion.rotateX(sign * driveSigned * 10);  // 速さ % → -1000〜1000。0 で止まる
 }
 
-// 顔の表情。設定が ON のときだけ、歩いている間を笑顔にする
+// うなずきを目標の角度へ。小さな変化と、短い間隔での連続の命令は送らない(サーボの通信を詰まらせない)
+void updatePitch(uint32_t now, bool force = false) {
+    const float diff = std::fabs(pitchTarget - pitchSent);
+    if (diff < 0.05f) {
+        return;
+    }
+    if (!force && (now - pitchSentMs < PITCH_INTERVAL_MS || (diff < PITCH_STEP_DEG && now - pitchSentMs < 300))) {
+        return;
+    }
+    const float degrees = constrain(pitchTarget, 0.0f, car::PITCH_MAX_DEG);  // 念のためここでも 0〜30° に収める
+    M5StackChan.Motion.movePitch(static_cast<int>(std::lround(degrees * 10)), PITCH_SPEED);  // 角度の単位は 0.1°
+    pitchSent = degrees;
+    pitchSentMs = now;
+}
+
+// 顔の表情。設定が ON のときだけ、走っている間を笑顔にする
 void applyExpression() {
     if (!avatarRunning) {
         return;
     }
-    const bool smile = smileWhileWalking && driveDirection != 0;
+    const bool smile = smileWhileWalking && driveSigned != 0;
     avatar.setExpression(smile ? m5avatar::Expression::Happy : m5avatar::Expression::Neutral);
 }
 
-void setDrive(int direction, int speed) {
-    driveDirection = constrain(direction, -1, 1);
-    driveSpeed = constrain(speed, SPEED_MIN, SPEED_MAX);
-    lastCommandMs = millis();
+void setControl(int x, int y, Source source) {
+    stickX = constrain(x, -100, 100);
+    stickY = constrain(y, -100, 100);
+    activeSource = (stickX == 0 && stickY == 0) ? Source::None : source;
+    driveSigned = car::driveFromStick(stickY);
+    pitchTarget = car::pitchFromStick(stickX, neutralDeg);
     applyDrive();
+    updatePitch(millis());
     applyExpression();
+}
+
+void stopControl() { setControl(0, 0, Source::None); }
+
+// パッドのスティックが倒れている間は、スマホからの値を受け付けない
+bool padIsSteering() {
+    return activeSource == Source::Pad && (abs(stickX) > car::DEAD_ZONE || abs(stickY) > car::DEAD_ZONE);
+}
+
+void setNeutral(float degrees) {
+    neutralDeg = car::clampNeutral(degrees);
+    prefs.putInt("neutral", static_cast<int>(std::lround(neutralDeg * 10)));
+    pitchTarget = car::pitchFromStick(stickX, neutralDeg);
+    updatePitch(millis(), true);
 }
 
 // ---------------------------------------------------------------- 画面
@@ -199,31 +246,56 @@ void showForgetConfirm() {
 
 // ---------------------------------------------------------------- ページと API
 void sendJsonState() {
-    char json[160];
-    snprintf(json, sizeof(json), "{\"dir\":%d,\"speed\":%d,\"invert\":%d,\"smile\":%d,\"volt\":%.2f}", driveDirection,
-             driveSpeed, invertDirection ? 1 : 0, smileWhileWalking ? 1 : 0, M5StackChan.getBatteryVoltage());
+    // パッドの名前は機器が決めるので、JSON を壊す文字を除く
+    char padName[32];
+    const char* source = gamepad::name();
+    size_t n = 0;
+    for (size_t i = 0; source[i] && n < sizeof(padName) - 1; i++) {
+        if (source[i] >= 0x20 && source[i] != '"' && source[i] != '\\') {
+            padName[n++] = source[i];
+        }
+    }
+    padName[n] = '\0';
+    char json[256];
+    snprintf(json, sizeof(json),
+             "{\"drive\":%d,\"pitch\":%.1f,\"neutral\":%.1f,\"invert\":%d,\"smile\":%d,\"volt\":%.2f,\"pad\":%d,"
+             "\"padName\":\"%s\",\"padBusy\":%d}",
+             driveSigned, pitchTarget, neutralDeg, invertDirection ? 1 : 0, smileWhileWalking ? 1 : 0,
+             M5StackChan.getBatteryVoltage(), static_cast<int>(padState), padName, padIsSteering() ? 1 : 0);
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", json);
 }
 
-void handleDrive() {
-    setDrive(server.arg("dir").toInt(), server.arg("speed").toInt());
+// スマホのジョイスティック。触れている間は 0.1 秒ごとに来る(止める見張りの合図も兼ねる)
+void handleJoy() {
+    const String press = server.arg("s");
+    if (!press.isEmpty() && press == stoppedPress) {
+        sendJsonState();
+        return;
+    }
+    lastPhoneMs = millis();
+    if (!padIsSteering()) {
+        setControl(server.arg("x").toInt(), server.arg("y").toInt(), Source::Phone);
+    }
     sendJsonState();
 }
 
+// 止めるのは、どちらが操作していても受け付ける
 void handleStop() {
-    setDrive(0, driveSpeed);
+    if (server.hasArg("s")) {
+        stoppedPress = server.arg("s");
+    }
+    stopControl();
     sendJsonState();
 }
 
-void handlePing() {
-    lastCommandMs = millis();
+void handleNeutral() {
+    setNeutral(server.arg("deg10").toInt() / 10.0f);
     sendJsonState();
 }
 
-void handleLook() {
-    const int degrees = constrain(server.arg("pitch").toInt(), 0, PITCH_MAX_DEG);
-    M5StackChan.Motion.movePitch(degrees * 10, 300);  // 角度の単位は 0.1°
+void handlePadForget() {
+    gamepad::forget();
     sendJsonState();
 }
 
@@ -242,7 +314,7 @@ void handleSmile() {
 }
 
 void handleForget() {
-    setDrive(0, driveSpeed);
+    stopControl();
     prefs.remove("ssid");
     prefs.remove("pass");
     server.send(200, "application/json", "{\"ok\":1}");
@@ -290,11 +362,11 @@ void startServer() {
             }
             server.send_P(200, "text/html; charset=utf-8", CONTROL_PAGE);
         });
-        server.on("/api/drive", handleDrive);
+        server.on("/api/joy", handleJoy);
         server.on("/api/stop", handleStop);
-        server.on("/api/ping", handlePing);
         server.on("/api/state", sendJsonState);
-        server.on("/api/look", handleLook);
+        server.on("/api/neutral", handleNeutral);
+        server.on("/api/pad/forget", handlePadForget);
         server.on("/api/invert", handleInvert);
         server.on("/api/smile", handleSmile);
         server.on("/api/forget", handleForget);
@@ -359,6 +431,10 @@ void setup() {
     prefs.begin("strider", false);
     invertDirection = prefs.getBool("invert", false);
     smileWhileWalking = prefs.getBool("smile", false);
+    neutralDeg = car::clampNeutral(prefs.getInt("neutral", static_cast<int>(std::lround(car::NEUTRAL_CAR500_DEG * 10))) / 10.0f);
+    pitchTarget = neutralDeg;
+    updatePitch(millis(), true);  // 起動したら、前輪をまっすぐにする
+    gamepad::begin();
     const String ssid = prefs.getString("ssid", "");
     if (!ssid.isEmpty() && connectHomeWifi(ssid, prefs.getString("pass", ""))) {
         startReadyMode();
@@ -371,10 +447,38 @@ void setup() {
     }
 }
 
+// パッドの値を取り込む。切れたときは、パッドが操作していれば止める
+void handleGamepad(uint32_t now) {
+    const gamepad::State state = gamepad::state();
+    if (state != padState) {
+        padState = state;
+        if (state == gamepad::State::Connected && avatarRunning) {
+            avatar.setSpeechText("Pad OK");
+            padBubbleUntilMs = now + PAD_BUBBLE_MS;
+        }
+    }
+    if (padBubbleUntilMs && now >= padBubbleUntilMs) {
+        padBubbleUntilMs = 0;
+        if (avatarRunning) {
+            avatar.setSpeechText("");
+        }
+    }
+    int x = 0, y = 0;
+    if (!gamepad::takeStick(x, y)) {
+        return;
+    }
+    const bool centred = abs(x) <= car::DEAD_ZONE && abs(y) <= car::DEAD_ZONE;
+    if (activeSource == Source::Pad || !centred) {
+        setControl(centred ? 0 : x, centred ? 0 : y, Source::Pad);  // 中心に戻したら、スマホに譲る
+    }
+}
+
 void loop() {
     M5StackChan.update();
     server.handleClient();
     const uint32_t now = millis();
+    handleGamepad(now);
+    updatePitch(now);
 
     if (mode == Mode::Setup) {
         dns.processNextRequest();
@@ -390,9 +494,9 @@ void loop() {
             }
         }
     } else {
-        // スマホからの合図が途切れたら止める(電波が切れた、ページを閉じた、など)
-        if (driveDirection != 0 && now - lastCommandMs > COMMAND_TIMEOUT_MS) {
-            setDrive(0, driveSpeed);
+        // スマホからの値が途切れたら止める(電波が切れた、ページを閉じた、など)
+        if (activeSource == Source::Phone && now - lastPhoneMs > COMMAND_TIMEOUT_MS) {
+            stopControl();
         }
         if (qrUntilMs && now >= qrUntilMs) {
             showFace();
@@ -417,7 +521,7 @@ void loop() {
         } else if (!restartAtMs) {
             if (M5StackChan.TouchSensor.pressedFor(FORGET_HOLD_MS) && !holdHandled) {
                 holdHandled = true;
-                setDrive(0, driveSpeed);
+                stopControl();
                 showForgetConfirm();
             } else if (M5StackChan.TouchSensor.wasReleased() && !holdHandled && !qrUntilMs) {
                 showControlQr();
