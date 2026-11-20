@@ -1,7 +1,7 @@
 """車の部品どうしの干渉と、寸法・質量・重心を確かめる。
 
 調べる姿勢: 車軸(=ターンテーブル)の回転 0〜315°(45° 刻み)× うなずき 0〜30°(2° 刻み)。前輪の切れ角はうなずきから決まる。
-使い方: python car/verify_car.py [--json out/car/verify.json]
+使い方: python car/verify_car.py [--model car|car500] [--json out/car/verify.json]
 """
 from __future__ import annotations
 
@@ -13,7 +13,9 @@ import sys
 
 import numpy as np
 
-import car_design as c
+import model_select
+
+c = model_select.load()
 
 VOLUME_TOL = 0.02  # これ未満の重なり体積 [mm^3] は面が接しているだけの数値誤差とみなす
 PLA_DENSITY = 1.24e-3  # g/mm^3
@@ -54,7 +56,10 @@ def summary() -> dict:
             moment += m * mesh.center_mass
     sc = c.d.SC_MASS_G
     sc_center = np.array([0.0, 4.0, c.d.TABLE_Z1 + 40.0])  # スタックチャンの重心の仮定(土台の底から 40 mm 上、やや前)
-    total = mass + sc
+    extra = sum(g for _, g, _ in c.EXTRA_MASSES)  # 鼻先のおもりなど、印刷しない重り
+    for _, g, at in c.EXTRA_MASSES:
+        moment = moment + g * np.asarray(at, float)
+    total = mass + sc + extra
     center = (moment + sc * sc_center) / total
     low_parts = sorted(((float(np.array(c.placed(i).bounding_box())[2]) - c.GROUND_Z, i.name) for i in c.instances()
                         if i.part not in ("tire", "wheel_rear", "wheel_front", "hubcap")))[:3]
@@ -62,18 +67,19 @@ def summary() -> dict:
         length=float(hi[1] - lo[1]), width=float(hi[0] - lo[0]), height=float(hi[2] - c.GROUND_Z),
         printed_g=round(mass, 1), total_g=round(total, 1), center_mm=[round(float(v), 1) for v in center],
         center_height_mm=round(float(center[2] - c.GROUND_Z), 1),
-        rear_axle_load=round(1 - float(center[1]) / c.WHEELBASE, 3),
+        rear_axle_load=round(1 - float(center[1]) / c.WHEELBASE, 3), extra_g=round(extra, 1),
         lowest=[(round(z, 1), n) for z, n in low_parts],
     )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--model", choices=list(model_select.MODELS), default="car")
     parser.add_argument("--json")
     args = parser.parse_args()
     s = summary()
-    print(f"全長 {s['length']:.1f} 全幅 {s['width']:.1f} 全高 {s['height']:.1f} mm  印刷部品 {s['printed_g']} g  合計 {s['total_g']} g")
-    print(f"重心 {s['center_mm']}(地面から {s['center_height_mm']} mm)  後輪にかかる重さの割合 {s['rear_axle_load']:.0%}  地面に近い部品 {s['lowest']}")
+    print(f"全長 {s['length']:.1f} 全幅 {s['width']:.1f} 全高 {s['height']:.1f} mm  印刷部品 {s['printed_g']} g  おもり {s['extra_g']} g  合計 {s['total_g']} g")
+    print(f"重心 {s['center_mm']}(地面から {s['center_height_mm']} mm)  後輪にかかる重さの割合 {s['rear_axle_load']:.0%}(前輪 {1 - s['rear_axle_load']:.0%})  地面に近い部品 {s['lowest']}")
     found = {}
     lo, hi = (int(v) for v in c.NOD_RANGE)
     for drive in range(0, 360, 45):

@@ -709,24 +709,22 @@
    "name": "Gray 1 #9a9a96",
    "color": "gray",
    "support": false,
-   "parts": 25,
+   "parts": 23,
    "contents": {
-    "molding_body_L": 1,
-    "clip": 8,
-    "bumper_rear": 1,
-    "wheel_front": 2,
-    "wheel_rear": 2,
-    "deck": 1,
-    "beam": 1,
-    "shaft": 1,
-    "socket_frame": 1,
-    "gear_table": 1,
     "molding_body_R": 1,
-    "windshield": 1,
+    "tie_rod": 1,
+    "clip": 8,
+    "wheel_rear": 2,
+    "gear_table": 1,
+    "molding_body_L": 1,
     "bumper_front": 1,
     "pinion": 1,
     "sleeve": 1,
-    "tie_rod": 1
+    "windshield": 1,
+    "wheel_front": 2,
+    "shaft": 1,
+    "bumper_rear": 1,
+    "beam": 1
    }
   },
   {
@@ -734,9 +732,11 @@
    "name": "Gray 2 #9a9a96",
    "color": "gray",
    "support": false,
-   "parts": 1,
+   "parts": 3,
    "contents": {
-    "yoke": 1
+    "socket_frame": 1,
+    "yoke": 1,
+    "deck": 1
    }
   },
   {

@@ -1,6 +1,6 @@
 """印刷する部品を造形時の向きで STL に書き出し、色ごとのプレートに並べた 3MF と部品表を作る。
 
-使い方: python car/build_car.py [--reference <Bambu Studio で P2S を選んで保存した .3mf>]
+使い方: python car/build_car.py [--model car|car500] [--reference <Bambu Studio で P2S を選んで保存した .3mf>]
   --reference を渡すと、その 3MF のプロジェクト設定を car/bambu_p2s_settings.json に写して正本にする
 出力: out/car/stl/<部品>_x<個数>.stl(ベッド面 = z 0 の造形時の向き)、out/car/3mf/stackchan_car.3mf(グレー・赤・黒のプレート)、out/car/parts.json
 公開用に同じものを print_car/ へ写す(out/ は git の対象外)
@@ -15,7 +15,9 @@ from pathlib import Path
 
 import numpy as np
 
-import car_design as c
+import model_select
+
+c = model_select.load()
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "walker"))
 import build as wb  # noqa: E402  walker の向きの行列・オーバーハングの数え方・輪郭での詰め方・Bambu Studio の 3MF をそのまま使う
@@ -70,6 +72,16 @@ PRINT_POSE = {
     "bumper_rear": (Z_UP, "腕と棒の下面を下(ツメの爪は層の中で開く)", False),
     "grille": (Y_UP, "後ろの面を下、盾を上", True),  # Bambu Studio でスライスするとサポートが要った
     "headlight": (Y_DOWN, "レンズを下", True),
+    # car500(FIAT 500 風)
+    "body500": (Y_UP, "後ろの面を下", True),
+    "badge": (Y_DOWN, "表を下(ピンを上)", True),
+    "bumper_front500": (Z_UP, "腕と棒の下面を下(ツメの爪は層の中で開く)", False),
+    "bumper_rear500": (Z_UP, "腕と棒の下面を下(ツメの爪は層の中で開く)", False),
+    "windshield500": (Y_UP, "寝かせる", False),
+    "top500": (Z_UP, "組んだときの向き", True),
+    "mirror500_R": (Z_UP, "差し込みの棒を下", True),
+    "mirror500_L": (Z_UP, "差し込みの棒を下", True),
+    "ballast_lid": (Z_UP, "つばを下", False),
 }
 # 3MF の中(Bambu Studio の画面)で使う英語名
 ENGLISH_NAMES = {
@@ -82,13 +94,20 @@ ENGLISH_NAMES = {
     "molding_body_R": "Molding body R", "molding_body_L": "Molding body L", "molding_hood_R": "Molding hood R",
     "molding_hood_L": "Molding hood L", "mirror_R": "Mirror R", "mirror_L": "Mirror L", "windshield": "Windshield",
     "top": "Folded top", "bumper_front": "Bumper front", "bumper_rear": "Bumper rear", "grille": "Grille", "headlight": "Headlight",
+    "body500": "Body (500)", "badge": "Nose badge", "bumper_front500": "Bumper front (500)", "bumper_rear500": "Bumper rear (500)",
+    "windshield500": "Windshield (500)", "top500": "Folded canvas top", "mirror500_R": "Door mirror R", "mirror500_L": "Door mirror L",
+    "ballast_lid": "Ballast lid",
 }
-PLATE_ORDER = (("gray", "Gray"), ("red", "Red"), ("black", "Black"))  # フィラメント 1〜3 の順
-# 部品どうしの間隔 [mm]。サポートは部品の輪郭より外へ広がるので、サポートの要る部品のプレートは広く空ける
-PLATE_GAP = {False: 5.0, True: 20.0}
-# サポートは要るが、サポートなしのプレートに載せる部品(ハットだけで 1 枚使うのを避ける。サポートは全体設定の
-# 「重要な領域のみ」で付く。ユーザーが Bambu Studio で並べ替えた配置に合わせた)
-PLAIN_PLATE = {"hat"}
+PLATE_ORDER = c.PLATE_ROLES  # フィラメント 1〜3 の順
+# 部品どうしの間隔 [mm]。自動ブリム(最大 brim_width)が両隣の部品から伸びても重ならない幅にする。
+# 5 mm ではブリムどうしが重なり、Bambu Studio で「パスの競合」になった。
+# サポートは部品の輪郭より外へ広がるので、サポートの要る部品のプレートはさらに広く空ける
+_BRIM = float(json.loads(P2S_SETTINGS.read_text(encoding="utf-8")).get("brim_width", 5))
+PLATE_GAP = {False: 2 * _BRIM + 2.0, True: max(20.0, 2 * _BRIM + 2.0)}
+# サポートの要否と違うプレートに載せる部品(部品 1〜2 個だけのプレートを作らないため)。True = support のプレート。
+# 車ごとに設計モジュールの PLATE_GROUP で決める。既定の hat はユーザーが Bambu Studio で並べ替えた配置に合わせた
+# (サポートは全体設定の「重要な領域のみ」で付く)
+PLATE_GROUP = getattr(c, "PLATE_GROUP", {"hat": False})
 
 
 def print_shape(key: str):
@@ -130,7 +149,7 @@ def _project_settings_text() -> str:
 def write_plates(defs, shapes, meshes) -> list[dict]:
     """色とサポートの要否ごとにベッドへ輪郭で詰め、全プレートを 1 つの 3MF に書く(walker/build.py の詰め方と書き方を使う)。
 
-    サポートの要る部品は別のプレートにまとめ、間隔を PLATE_GAP[True] に広げる(PLAIN_PLATE の部品は除く)。
+    サポートの要る部品は別のプレートにまとめ、間隔を PLATE_GAP[True] に広げる(PLATE_GROUP で載せ替える部品を除く)。
     サポートは全体設定(car/bambu_p2s_settings.json)でオン、「重要な領域のみ」。
     """
     out_dir = c.OUT / "3mf"
@@ -140,7 +159,7 @@ def write_plates(defs, shapes, meshes) -> list[dict]:
         for support in (False, True):
             items = {}
             for key, part in defs.items():
-                if key in shapes and part.color == c.COLORS[role] and (PRINT_POSE[key][2] and key not in PLAIN_PLATE) == support:
+                if key in shapes and part.color == c.COLORS[role] and PLATE_GROUP.get(key, PRINT_POSE[key][2]) == support:
                     mask = wb._footprint(shapes[key])
                     for _ in range(part.count):
                         items[len(items)] = (key, mask)
@@ -157,7 +176,7 @@ def write_plates(defs, shapes, meshes) -> list[dict]:
                 result.append(dict(plate=len(plates), name=name, color=role, support=support, parts=len(plate), contents=counts))
     wb.project_settings_text = _project_settings_text  # Studio が保存した P2S の設定のまま、フィラメントの色だけ車の色にする
     wb.BS_VERSION = json.loads(P2S_SETTINGS.read_text(encoding="utf-8"))["version"]  # 3MF の Application の版を、設定を保存した Studio にそろえる
-    path = out_dir / "stackchan_car.3mf"
+    path = out_dir / f"{c.PROJECT_NAME}.3mf"
     path.unlink(missing_ok=True)
     wb.write_bambu_project(path, plates)
     return result
@@ -165,6 +184,7 @@ def write_plates(defs, shapes, meshes) -> list[dict]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--model", choices=list(model_select.MODELS), default="car", help="作る車(car = レトロカー、car500 = FIAT 500 風)")
     parser.add_argument("--reference", type=Path, help="Bambu Studio で P2S を選んで保存した 3MF(設定の正本を取り替えるとき)")
     args = parser.parse_args()
     if args.reference:
@@ -203,10 +223,10 @@ def main() -> int:
     for r in rows:
         by_color[r["color"]] = by_color.get(r["color"], 0) + r["volume_cm3"] * r["count"]
     print("色ごとの体積(cm3): " + "、".join(f"{k} {v:.1f}" for k, v in by_color.items()))
-    publish = c.ROOT / "print_car"
+    publish = c.PUBLISH
     shutil.rmtree(publish, ignore_errors=True)
     shutil.copytree(out, publish / "stl")
-    shutil.copy2(c.OUT / "3mf" / "stackchan_car.3mf", publish)
+    shutil.copy2(c.OUT / "3mf" / f"{c.PROJECT_NAME}.3mf", publish)
     shutil.copy2(c.OUT / "parts.json", publish)
     for p in plates:
         print(f"プレート {p['plate']} {p['name']}: {p['parts']} 個 " + "、".join(f"{k}×{n}" for k, n in p["contents"].items()))

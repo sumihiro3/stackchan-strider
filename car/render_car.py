@@ -1,6 +1,6 @@
 """組み上がった車を MuJoCo のオフスクリーン描画で画像にする(見た目の確認用)。
 
-使い方: python car/render_car.py [--pitch 13] [--drive 0](前輪の切れ角はうなずきから決まる。--pitch を省くと直進)
+使い方: python car/render_car.py [--model car|car500] [--pitch 13] [--drive 0](前輪の切れ角はうなずきから決まる。--pitch を省くと直進)
 出力: out/car/views/{front34,side,top,front,rear34,ear}.png
 """
 from __future__ import annotations
@@ -13,10 +13,12 @@ import mujoco
 import numpy as np
 from PIL import Image
 
-import car_design as c
+import model_select
+
+c = model_select.load()
 
 MM = 0.001
-VIEWS = {  # 名前: (カメラ位置[mm]、注視点[mm])。地面は z = -30
+VIEWS = getattr(c, "VIEWS", None) or {  # 名前: (カメラ位置[mm]、注視点[mm])。地面は z = -30
     "front34": ((260, 330, 150), (0, 40, 10)),
     "rear34": ((-260, -300, 170), (0, 30, 10)),
     "side": ((520, 40, 20), (0, 40, 20)),
@@ -91,6 +93,7 @@ def render(drive: float = 0.0, pitch: float | None = None, suffix: str = "") -> 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--model", choices=list(model_select.MODELS), default="car")
     parser.add_argument("--pitch", type=float, default=None, help="うなずき [deg](省くと直進の角度)")
     parser.add_argument("--drive", type=float, default=0.0, help="車軸の回転角 [deg]")
     parser.add_argument("--suffix", default="")

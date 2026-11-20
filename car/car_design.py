@@ -29,6 +29,10 @@ d.PITCH_Z = d.TABLE_Z1 + d.SC_PITCH_AXIS_H
 
 ROOT = d.ROOT
 OUT = ROOT / "out" / "car"
+PUBLISH = ROOT / "print_car"  # build_car.py が印刷用の出力を写す先
+PROJECT_NAME = "stackchan_car"  # 3MF のファイル名
+PLATE_ROLES = (("gray", "Gray"), ("red", "Red"), ("black", "Black"))  # フィラメント 1〜3 の色(COLORS のキー)とプレート名
+EXTRA_MASSES: list = []  # 印刷しない重り [(名前, g, (x, y, z))]。verify_car.py の重心に入れる
 
 # ---------------------------------------------------------------- 寸法
 WHEEL_R = 30.0  # タイヤの外半径。ピニオンの歯先(半径 21.4)と地面のすきまが 8.6 mm 残る
@@ -972,7 +976,25 @@ def link_pose(theta: float, delta: float) -> np.ndarray:
 
 fit_drag_arm()
 
-CLIP_UP = np.array([[0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1.0]])  # クリップ(軸 X、厚み +X)を、軸 Z、厚み +Z に
+
+def configure(wheelbase: float, rail_taper_y: tuple[float, float], link_knee: tuple[float, float] | None = None) -> None:
+    """前後の車軸の間隔を変える(別の車体がこのモジュールの駆動部とかじ取りを使い回すとき用)。
+
+    間隔から決まる値を計算し直し、形のキャッシュを捨てて、ドラッグアームの長さを合わせ直す。
+    レトロカーではこれを呼ばない(既定値のまま)。部品を作る前に 1 回だけ呼ぶこと。
+    """
+    global WHEELBASE, RAIL_TAPER_Y, RAIL_FRONT_Y, LINK_KNEE
+    WHEELBASE, RAIL_TAPER_Y = wheelbase, rail_taper_y
+    RAIL_FRONT_Y = WHEELBASE + 13.0
+    if link_knee is not None:
+        LINK_KNEE = link_knee
+    for value in list(globals().values()):
+        if callable(getattr(value, "cache_clear", None)):
+            value.cache_clear()
+    fit_drag_arm()
+
+
+CLIP_UP =np.array([[0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1.0]])  # クリップ(軸 X、厚み +X)を、軸 Z、厚み +Z に
 
 
 GRILLE_POSE = translation(0, HOOD_NOSE_Y - 1.5, 22.0)
