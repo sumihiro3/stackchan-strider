@@ -125,10 +125,45 @@ def _rear_fender_ring() -> Manifold:
 
 
 def ballast_tube() -> Manifold:
-    """鼻の中の 10 円玉の筒(下が開いていて、ふたを差す)。上は殻の内面につなぐ。"""
+    """鼻の中の 10 円玉の筒(下が開いていて、ふたを差す)。上は殻の内面につなぐ。外壁に、ふたのツメの返しが掛かる溝を彫る。"""
     b = BALLAST
     tube = cyl(BALLAST_HOLE_R + b["wall"], b["z0"], 60.0).translate((0, b["y"], 0)) ^ shell_inner(-0.5)  # noqa: F405
-    return tube - cyl(BALLAST_HOLE_R, b["z0"] - 1.0, b["z0"] + b["plug"] + COINS * COIN_T + 0.3).translate((0, b["y"], 0))  # noqa: F405
+    tube -= cyl(BALLAST_HOLE_R, b["z0"] - 1.0, b["z0"] + b["plug"] + COINS * COIN_T + 0.3).translate((0, b["y"], 0))  # noqa: F405
+    return tube - _lid_groove()
+
+
+def _lid_tab_geometry() -> dict:
+    """ふたのツメと筒の溝の寸法(半径と高さ、設計の座標)。"""
+    b, t = BALLAST, LID_TAB
+    tube_r = BALLAST_HOLE_R + b["wall"]
+    barb_z0 = b["z0"] - LID_GAP + t["length"] - t["barb_h"] - t["lead_h"]  # 返しの下面(抜けを止める面)
+    return dict(tube_r=tube_r, tab_r0=tube_r + SNAP_CLEAR, tab_r1=tube_r + SNAP_CLEAR + t["t"],  # noqa: F405
+                tip_r=tube_r + SNAP_CLEAR - d.SNAP_BARB, barb_z0=barb_z0, top_z=b["z0"] - LID_GAP + t["length"])  # noqa: F405
+
+
+def _lid_groove() -> Manifold:
+    """筒の外壁の溝(返しの先より 0.2 mm 深く、上下に 0.2 mm ずつ余裕)。"""
+    g = _lid_tab_geometry()
+    ring = cyl(g["tube_r"] + 1.0, g["barb_z0"] - 0.2, g["top_z"] - 0.2) - cyl(g["tip_r"] - 0.2, g["barb_z0"] - 1.0, g["top_z"] + 1.0)  # noqa: F405
+    return ring.translate((0, BALLAST["y"], 0))
+
+
+def _lid_tabs() -> Manifold:
+    """ふたのつばから筒の外に立つツメ(count 本)と、先の内向きの返し(上に面取り)。"""
+    b, t, g = BALLAST, LID_TAB, _lid_tab_geometry()
+    z_base = b["z0"] - LID_GAP - 0.01
+    wall = cyl(g["tab_r1"], z_base, g["top_z"]) - cyl(g["tab_r0"], z_base - 1, g["top_z"] + 1)  # noqa: F405
+    z1, z2 = g["barb_z0"] + t["barb_h"], g["top_z"]
+    barb = Manifold.revolve(polygon([(g["tip_r"], g["barb_z0"]), (g["tab_r0"] + 0.05, g["barb_z0"]), (g["tab_r0"] + 0.05, z2),  # noqa: F405
+                                     (g["tab_r0"], z2), (g["tip_r"], z1)]), 96)
+    tabs = Manifold()
+    for k in range(t["count"]):
+        mid = 90.0 + 360.0 * k / t["count"]  # 1 本を真前(鼻の側)に向ける
+        half = math.radians(t["width_deg"] / 2)
+        a0, a1 = math.radians(mid) - half, math.radians(mid) + half
+        wedge = polygon([(0, 0)] + [(30 * math.cos(a0 + (a1 - a0) * i / 8), 30 * math.sin(a0 + (a1 - a0) * i / 8)) for i in range(9)])  # noqa: F405
+        tabs += (wall + barb) ^ Manifold.extrude(wedge, 40.0).translate((0, 0, z_base - 5))
+    return tabs.translate((0, b["y"], 0))
 
 
 @lru_cache(maxsize=None)
@@ -209,6 +244,9 @@ BUMPER_F_Y, BUMPER_R_Y, BUMPER_R_Z = NOSE_Y - 1.0, REAR_Y - BUMPER_BAR_R - 0.3, 
 BUMPER_R_BOSS_Y_500 = REAR_Y + 7.5  # 後ろの壁の内側の台の内面(ツメの返しが掛かる)
 TOP_PEG_500 = dict(x=24.0, y=-47.0, r=1.0, h=3.5)
 LID_GAP = 0.3  # ふたのつばと筒の下端のすきま
+# ふたのツメ。筒の中は 10 円玉で埋まるので、ツメは筒の外に立て、内向きの返しを筒の外壁の溝に掛ける(外へ広げて外す)。
+# 返しと筒の外壁の掛かりは片側 SNAP_BARB - SNAP_CLEAR = 0.3 mm(殻・バンパーのツメと同じ)
+LID_TAB = dict(count=3, width_deg=50.0, t=1.2, length=6.0, barb_h=1.0, lead_h=1.0)
 
 
 @lru_cache(maxsize=None)
@@ -332,12 +370,12 @@ def mirror500_part() -> Manifold:
 
 @lru_cache(maxsize=None)
 def ballast_lid_part() -> Manifold:
-    """おもりの筒のふた(設計の座標)。差し込みの輪を筒の穴に押し込む。10 円玉はこの上に重ねる。"""
+    """おもりの筒のふた(設計の座標)。差し込みの輪で筒の真ん中に合わせ、筒の外のツメの返しで留める。10 円玉はこの上に重ねる。"""
     b = BALLAST
     z0 = b["z0"]
-    flange = cyl(BALLAST_HOLE_R + b["wall"], z0 - LID_GAP - b["flange"], z0 - LID_GAP)  # noqa: F405
+    flange = cyl(_lid_tab_geometry()["tab_r1"], z0 - LID_GAP - b["flange"], z0 - LID_GAP)  # noqa: F405
     plug = cyl(BALLAST_HOLE_R - PRESS_FIT, z0 - LID_GAP - 0.01, z0 + b["plug"]) - cyl(BALLAST_HOLE_R - PRESS_FIT - 1.2, z0, z0 + b["plug"] + 1)  # noqa: F405
-    return (flange + plug).translate((0, b["y"], 0))
+    return (flange + plug).translate((0, b["y"], 0)) + _lid_tabs()
 
 
 def ballast_part() -> Manifold:

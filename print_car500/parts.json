@@ -442,8 +442,8 @@
     63.5,
     161.0
    ],
-   "volume_cm3": 61.55,
-   "overhang_mm2": 9303.5,
+   "volume_cm3": 61.46,
+   "overhang_mm2": 9302.1,
    "bed_mm2": 81.1,
    "orientation": "後ろの面を下",
    "support": true,
@@ -582,13 +582,13 @@
    "color": "gray",
    "count": 1,
    "size_mm": [
-    26.9,
-    26.9,
-    3.5
+    29.7,
+    29.7,
+    7.2
    ],
-   "volume_cm3": 0.98,
-   "overhang_mm2": 0.0,
-   "bed_mm2": 567.6,
+   "volume_cm3": 1.42,
+   "overhang_mm2": 17.4,
+   "bed_mm2": 691.9,
    "orientation": "つばを下",
    "support": false,
    "watertight": true,
