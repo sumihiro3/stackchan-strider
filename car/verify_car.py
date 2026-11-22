@@ -62,7 +62,7 @@ def summary() -> dict:
     total = mass + sc + extra
     center = (moment + sc * sc_center) / total
     low_parts = sorted(((float(np.array(c.placed(i).bounding_box())[2]) - c.GROUND_Z, i.name) for i in c.instances()
-                        if i.part not in ("tire", "wheel_rear", "wheel_front", "hubcap")))[:3]
+                        if i.part not in ("wheel_rear", "wheel_front", "hubcap")))[:3]
     return dict(
         length=float(hi[1] - lo[1]), width=float(hi[0] - lo[0]), height=float(hi[2] - c.GROUND_Z),
         printed_g=round(mass, 1), total_g=round(total, 1), center_mm=[round(float(v), 1) for v in center],

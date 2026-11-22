@@ -21,7 +21,7 @@ DOCS = Path(__file__).resolve().parent.parent / "docs_car500"
 SHELL_PARTS = {"body500", "badge", "headlight", "windshield500", "top500", "mirror500_R", "mirror500_L"}
 LIFT = {**{k: 110.0 for k in SHELL_PARTS}, "ballast": 55.0, "ballast_lid": 25.0}
 # 断面図に出す部品(鼻のまわりだけ)
-SECTION_PARTS = {"body500", "ballast", "ballast_lid", "beam", "tie_rod", "knuckle_R", "knuckle_L", "wheel_front", "tire",
+SECTION_PARTS = {"body500", "ballast", "ballast_lid", "beam", "tie_rod", "knuckle_R", "knuckle_L", "wheel_front",
                  "headlight", "badge", "bumper_front500", "rail_R", "rail_L"}
 EXPLODE_VIEWS = {"explode": ((300, 360, 190), (0, 40, 50)), "explode_below": ((230, 330, -10), (0, 60, 60))}
 SECTION_VIEWS = {"ballast_section": ((120, 70, 25), (0, 88, 14))}

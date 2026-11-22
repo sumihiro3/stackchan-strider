@@ -308,36 +308,36 @@
   },
   {
    "key": "wheel_rear",
-   "label": "後輪のホイール",
-   "color": "gray",
+   "label": "後輪(ホイールとタイヤの一体)",
+   "color": "black",
    "count": 2,
    "size_mm": [
-    47.0,
-    47.0,
+    60.0,
+    60.0,
     17.1
    ],
-   "volume_cm3": 8.3,
-   "overhang_mm2": 2125.8,
-   "bed_mm2": 626.3,
-   "orientation": "外の面を下(皿の下面はリムとハブの間 11 mm の橋)",
+   "volume_cm3": 18.36,
+   "overhang_mm2": 1056.2,
+   "bed_mm2": 1181.3,
+   "orientation": "外の面を下(タイヤと一体。皿の下面はリムとハブの間 11 mm の橋)",
    "support": false,
    "watertight": true,
    "fits_bed": true
   },
   {
    "key": "wheel_front",
-   "label": "前輪のホイール",
-   "color": "gray",
+   "label": "前輪(ホイールとタイヤの一体)",
+   "color": "black",
    "count": 2,
    "size_mm": [
-    47.0,
-    47.0,
+    60.0,
+    60.0,
     10.0
    ],
-   "volume_cm3": 7.68,
-   "overhang_mm2": 1102.9,
-   "bed_mm2": 1677.4,
-   "orientation": "内の面を下(皿の下面は 11 mm の橋)",
+   "volume_cm3": 17.74,
+   "overhang_mm2": 1034.2,
+   "bed_mm2": 1231.6,
+   "orientation": "内の面を下(タイヤと一体。皿の下面は 11 mm の橋)",
    "support": false,
    "watertight": true,
    "fits_bed": true
@@ -357,24 +357,6 @@
    "bed_mm2": 23.1,
    "orientation": "差し込みの筒を下",
    "support": true,
-   "watertight": true,
-   "fits_bed": true
-  },
-  {
-   "key": "tire",
-   "label": "タイヤ",
-   "color": "black",
-   "count": 4,
-   "size_mm": [
-    60.0,
-    60.0,
-    7.4
-   ],
-   "volume_cm3": 8.58,
-   "overhang_mm2": 259.0,
-   "bed_mm2": 1016.6,
-   "orientation": "寝かせる",
-   "support": false,
    "watertight": true,
    "fits_bed": true
   },
@@ -709,22 +691,21 @@
    "name": "Gray 1 #9a9a96",
    "color": "gray",
    "support": false,
-   "parts": 23,
+   "parts": 20,
    "contents": {
+    "shaft": 1,
     "molding_body_R": 1,
-    "tie_rod": 1,
-    "clip": 8,
-    "wheel_rear": 2,
-    "gear_table": 1,
     "molding_body_L": 1,
+    "beam": 1,
+    "tie_rod": 1,
+    "deck": 1,
+    "yoke": 1,
     "bumper_front": 1,
+    "bumper_rear": 1,
+    "windshield": 1,
     "pinion": 1,
     "sleeve": 1,
-    "windshield": 1,
-    "wheel_front": 2,
-    "shaft": 1,
-    "bumper_rear": 1,
-    "beam": 1
+    "clip": 8
    }
   },
   {
@@ -732,11 +713,10 @@
    "name": "Gray 2 #9a9a96",
    "color": "gray",
    "support": false,
-   "parts": 3,
+   "parts": 2,
    "contents": {
-    "socket_frame": 1,
-    "yoke": 1,
-    "deck": 1
+    "gear_table": 1,
+    "socket_frame": 1
    }
   },
   {
@@ -779,8 +759,9 @@
    "support": false,
    "parts": 10,
    "contents": {
+    "wheel_front": 2,
+    "wheel_rear": 2,
     "hat": 1,
-    "tire": 4,
     "fender_rear_L": 1,
     "fender_rear_R": 1,
     "hat_back": 1,

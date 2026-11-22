@@ -1,6 +1,7 @@
 """印刷する部品を造形時の向きで STL に書き出し、色ごとのプレートに並べた 3MF と部品表を作る。
 
 使い方: python car/build_car.py [--model car|car500] [--reference <Bambu Studio で P2S を選んで保存した .3mf>]
+  一部の部品だけの 3MF: python car/build_car.py --model car500 --only wheel_rear,wheel_front
   --reference を渡すと、その 3MF のプロジェクト設定を car/bambu_p2s_settings.json に写して正本にする
 出力: out/car/stl/<部品>_x<個数>.stl(ベッド面 = z 0 の造形時の向き)、out/car/3mf/stackchan_car.3mf(グレー・赤・黒のプレート)、out/car/parts.json
 公開用に同じものを print_car/ へ写す(out/ は git の対象外)
@@ -50,10 +51,9 @@ PRINT_POSE = {
     "link": (Z_UP, "水平の板を下、縦の板を立てる", True),
     "tie_rod": (Z_UP, "寝かせる", False),
     "clip": (X_UP, "寝かせる", False),
-    "wheel_rear": (X_DOWN, "外の面を下(皿の下面はリムとハブの間 11 mm の橋)", False),
-    "wheel_front": (X_UP, "内の面を下(皿の下面は 11 mm の橋)", False),
+    "wheel_rear": (X_DOWN, "外の面を下(タイヤと一体。皿の下面はリムとハブの間 11 mm の橋)", False),
+    "wheel_front": (X_UP, "内の面を下(タイヤと一体。皿の下面は 11 mm の橋)", False),
     "hubcap": (X_UP, "差し込みの筒を下", True),
-    "tire": (X_UP, "寝かせる", False),
     "body_rear": (Y_UP, "後ろの面を下", True),
     "body_front": (Y_UP, "後ろ(風防側)の切り口を下", True),
     "fender_rear_R": (X_DOWN, "外側の縁を下、ピンを上", False),
@@ -89,7 +89,7 @@ ENGLISH_NAMES = {
     "socket_frame": "Socket frame", "pinion": "Pinion", "sleeve": "Sleeve", "shaft": "Rear axle", "beam": "Front beam",
     "knuckle_R": "Knuckle R", "knuckle_L": "Knuckle L", "hat": "Hat", "hat_back": "Hat back plate", "link": "Drag link",
     "tie_rod": "Tie rod", "clip": "C-clip", "wheel_rear": "Rear wheel", "wheel_front": "Front wheel", "hubcap": "Hubcap",
-    "tire": "Tire", "body_rear": "Body rear", "body_front": "Body front", "fender_rear_R": "Fender rear R",
+    "body_rear": "Body rear", "body_front": "Body front", "fender_rear_R": "Fender rear R",
     "fender_rear_L": "Fender rear L", "fender_front_R": "Fender front R", "fender_front_L": "Fender front L",
     "molding_body_R": "Molding body R", "molding_body_L": "Molding body L", "molding_hood_R": "Molding hood R",
     "molding_hood_L": "Molding hood L", "mirror_R": "Mirror R", "mirror_L": "Mirror L", "windshield": "Windshield",
@@ -146,7 +146,7 @@ def _project_settings_text() -> str:
     return json.dumps(settings, ensure_ascii=False, indent=4)
 
 
-def write_plates(defs, shapes, meshes) -> list[dict]:
+def write_plates(defs, shapes, meshes, project: str | None = None) -> list[dict]:
     """色とサポートの要否ごとにベッドへ輪郭で詰め、全プレートを 1 つの 3MF に書く(walker/build.py の詰め方と書き方を使う)。
 
     サポートの要る部品は別のプレートにまとめ、間隔を PLATE_GAP[True] に広げる(PLATE_GROUP で載せ替える部品を除く)。
@@ -176,17 +176,38 @@ def write_plates(defs, shapes, meshes) -> list[dict]:
                 result.append(dict(plate=len(plates), name=name, color=role, support=support, parts=len(plate), contents=counts))
     wb.project_settings_text = _project_settings_text  # Studio が保存した P2S の設定のまま、フィラメントの色だけ車の色にする
     wb.BS_VERSION = json.loads(P2S_SETTINGS.read_text(encoding="utf-8"))["version"]  # 3MF の Application の版を、設定を保存した Studio にそろえる
-    path = out_dir / f"{c.PROJECT_NAME}.3mf"
+    path = out_dir / f"{project or c.PROJECT_NAME}.3mf"
     path.unlink(missing_ok=True)
     wb.write_bambu_project(path, plates)
     return result
+
+
+def write_only(keys: list[str]) -> int:
+    """指定した部品だけを並べた 3MF を <PROJECT_NAME>_<部品>.3mf として作り、公開先にも写す(試し刷り用)。"""
+    defs = c.part_defs()
+    unknown = [k for k in keys if k not in defs or not defs[k].printable]
+    if unknown:
+        raise SystemExit(f"印刷する部品ではない: {unknown}")
+    defs = {k: defs[k] for k in keys}
+    shapes = {k: print_shape(k) for k in keys}
+    meshes = {k: d.to_trimesh(shapes[k]) for k in keys}
+    name = f"{c.PROJECT_NAME}_" + "_".join(keys)
+    plates = write_plates(defs, shapes, meshes, name)
+    shutil.copy2(c.OUT / "3mf" / f"{name}.3mf", c.PUBLISH)
+    for p in plates:
+        print(f"プレート {p['plate']} {p['name']}: {p['parts']} 個 " + "、".join(f"{k}×{n}" for k, n in p["contents"].items()))
+    print(c.PUBLISH / f"{name}.3mf")
+    return 0
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", choices=list(model_select.MODELS), default="car", help="作る車(car = レトロカー、car500 = FIAT 500 風)")
     parser.add_argument("--reference", type=Path, help="Bambu Studio で P2S を選んで保存した 3MF(設定の正本を取り替えるとき)")
+    parser.add_argument("--only", help="この部品だけの 3MF を別に作る(カンマ区切り。例 wheel_rear,wheel_front)。全体の出力は変えない")
     args = parser.parse_args()
+    if args.only:
+        return write_only(args.only.split(","))
     if args.reference:
         import_reference_settings(args.reference)
     out = c.OUT / "stl"

@@ -38,6 +38,8 @@ EXTRA_MASSES: list = []  # 印刷しない重り [(名前, g, (x, y, z))]。veri
 WHEEL_R = 30.0  # タイヤの外半径。ピニオンの歯先(半径 21.4)と地面のすきまが 8.6 mm 残る
 RIM_R = 22.0  # ホイールの外半径 = タイヤの内半径
 TIRE_W = 10.0
+TIRE_CHAMFER = 3.0  # タイヤの角の 45° の面取り。前は別部品のタイヤの角(1.5)とつば(半径 23.5)の内に収める
+GROOVE_DEPTH = 1.0  # 中央の V 溝(O リング 太さ 2 mm 用)の深さ
 WHEEL_X0 = 58.0  # ホイールの内面 |x|(デッキとヨークのツメの先 53.4 と、ボディの外面 56 の外)
 WHEEL_X1 = WHEEL_X0 + TIRE_W
 WHEELBASE = 105.0
@@ -338,18 +340,22 @@ def _hex_bore_x(af: float, x0: float, x1: float) -> Manifold:
 
 
 def _wheel(bore: CrossSection | None, inner_hub: bool) -> Manifold:
-    """ホイール(ローカル: 軸 = X、内面 x = 0、外へ +X)。皿形で、中心に赤いキャップの穴。"""
+    """ホイールとタイヤの一体(ローカル: 軸 = X、内面 x = 0、外へ +X)。皿形で、中心に赤いキャップの穴。
+
+    PLA どうしでは別のタイヤをはめられないので、タイヤも同じ部品にする。
+    どちらの面を下にしても浮く張り出しがないよう、タイヤの角は 45° で落とし、溝も V 字にする。
+    """
     w = TIRE_W
-    rim = cyl_x(RIM_R, 0, w) - cyl_x(RIM_R - 2.0, 1.0, w + 1)
-    ring = cyl_x(RIM_R + 1.5, -1, 1) - cyl_x(RIM_R - 1.0, -2, 2)
-    flange = ring.translate((0.0, 0, 0)).trim_by_plane((1, 0, 0), 0).trim_by_plane((-1, 0, 0), -1.2) + \
-        ring.translate((w - 0.6, 0, 0)).trim_by_plane((1, 0, 0), w - 1.2).trim_by_plane((-1, 0, 0), -w)  # タイヤの横ずれ止め(輪)
-    # 皿は外の面から 1.5 mm 下げる。ハブは外の面まで通す(外の面を下にして印刷するとき、皿の下面がリムとハブの間の橋になる)
+    c = TIRE_CHAMFER
+    pts = [(RIM_R - 2.0, 0.0), (WHEEL_R - c, 0.0), (WHEEL_R, c), (WHEEL_R, w - c), (WHEEL_R - c, w), (RIM_R - 2.0, w)]
+    band = polygon(pts).revolve(96).transform(np.array([[0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0]], dtype=np.float64))
+    band -= cyl_x(RIM_R - 2.0, 1.0, w + 1)
+    v = polygon([(WHEEL_R - GROOVE_DEPTH, w / 2), (WHEEL_R + 1.0, w / 2 - GROOVE_DEPTH - 1.0), (WHEEL_R + 1.0, w / 2 + GROOVE_DEPTH + 1.0)])
+    band -= v.revolve(96).transform(np.array([[0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0]], dtype=np.float64))
+    # 皿は外の面から 1.5 mm 下げる。ハブは外の面まで通す(外の面を下にして印刷するとき、皿の下面がリムとハブの間の橋になる)。
+    # 飾りの穴は橋の上で糸を引くのでつけない
     dish = cyl_x(RIM_R - 1.0, w - 3.5, w - 1.5) + cyl_x(HUB_R + 2.0, 0, w)
-    for k in range(8):  # 飾りの穴(スポーク風)
-        a = 2 * math.pi * k / 8
-        dish -= cyl_x(2.4, w - 4, w, 15.0 * math.cos(a), 15.0 * math.sin(a))
-    wheel = rim + flange + dish
+    wheel = band + dish
     if inner_hub:
         wheel += cyl_x(HUB_R, HUB_X0 - WHEEL_X0, 0.01)
     if bore is not None:
@@ -373,17 +379,6 @@ def wheel_front_part() -> Manifold:
     """前輪。軸受け穴(半径 STUB_R + HOLE_FIT)の奥に壁があり、溝つきピンの穴だけ通す。"""
     wheel = _wheel(None, False)
     return wheel - cyl_x(STUB_R + HOLE_FIT, -1.0, FRONT_BORE_X1) - cyl_x(d.STUD_R + HOLE_FIT, 0.0, FRONT_WALL_X1 + 1.0)
-
-
-@lru_cache(maxsize=None)
-def tire_part() -> Manifold:
-    """タイヤ(黒)。外周は丸く、中央に O リング(太さ 2 mm)の溝。ホイールのつばの間にはまる。"""
-    w = TIRE_W - 2.6
-    pts = [(RIM_R + 0.1, 0.0), (WHEEL_R - 1.5, 0.0), (WHEEL_R, 1.5), (WHEEL_R, w - 1.5), (WHEEL_R - 1.5, w), (RIM_R + 0.1, w)]
-    ring = polygon([(r, x) for r, x in pts]).revolve(96)
-    ring = ring.transform(np.array([[0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0]], dtype=np.float64))
-    groove = cyl_x(WHEEL_R + 1, w / 2 - 1.1, w / 2 + 1.1) - cyl_x(WHEEL_R - 1.4, w / 2 - 2, w / 2 + 2)
-    return (ring - groove).translate((1.3, 0, 0))
 
 
 @lru_cache(maxsize=None)
@@ -1032,10 +1027,9 @@ def part_defs() -> dict[str, PartDef]:
         PartDef("link", "かじ取りの引き棒", link_part, c["gray"], 1),
         PartDef("tie_rod", "タイロッド", tie_rod_part, c["gray"], 1),
         PartDef("clip", "C クリップ(walker と同じ)", d.clip_part, c["gray"], 8),
-        PartDef("wheel_rear", "後輪のホイール", wheel_rear_part, c["gray"], 2),
-        PartDef("wheel_front", "前輪のホイール", wheel_front_part, c["gray"], 2),
+        PartDef("wheel_rear", "後輪(ホイールとタイヤの一体)", wheel_rear_part, c["black"], 2),
+        PartDef("wheel_front", "前輪(ホイールとタイヤの一体)", wheel_front_part, c["black"], 2),
         PartDef("hubcap", "ホイールキャップ", hubcap_part, c["red"], 4),
-        PartDef("tire", "タイヤ", tire_part, c["black"], 4),
         PartDef("body_rear", "後ろのボディ", body_rear_part, c["red"], 1),
         PartDef("body_front", "前のボディ", body_front_part, c["red"], 1),
         PartDef("fender_rear_R", "右後ろのフェンダー", fender_rear_part, c["black"], 1),
@@ -1101,7 +1095,6 @@ def instances(drive: float = 0.0, head_pitch: float | None = None, with_stackcha
         wheel = translation(sx * WHEEL_X0, 0, 0) @ spin @ flip
         out += [
             Instance(f"wheel_rear_{tag}", "wheel_rear", wheel, "axle"),
-            Instance(f"tire_rear_{tag}", "tire", wheel, "axle"),
             Instance(f"hubcap_rear_{tag}", "hubcap", wheel @ translation(TIRE_W, 0, 0), "axle"),
         ]
         knuckle = translation(sx * KINGPIN_X, WHEELBASE, 0) @ rot_z(steer)
@@ -1115,7 +1108,6 @@ def instances(drive: float = 0.0, head_pitch: float | None = None, with_stackcha
         front_wheel = knuckle @ translation(sx * (WHEEL_X0 - KINGPIN_X), 0, 0) @ flip
         out += [
             Instance(f"wheel_front_{tag}", "wheel_front", front_wheel, f"steer_{tag}"),
-            Instance(f"tire_front_{tag}", "tire", front_wheel, f"steer_{tag}"),
             Instance(f"hubcap_front_{tag}", "hubcap", front_wheel @ translation(TIRE_W, 0, 0), f"steer_{tag}"),
             Instance(f"clip_wheel_{tag}", "clip", front_wheel @ translation(FRONT_BORE_X1 - 0.2 + d.clip_seat(FRONT_CLIP_CLEAR), 0, 0), f"steer_{tag}"),
         ]
