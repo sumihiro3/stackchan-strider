@@ -1,6 +1,6 @@
 """組み上がった車を MuJoCo のオフスクリーン描画で画像にする(見た目の確認用)。
 
-使い方: python car/render_car.py [--model car|car500] [--pitch 13] [--drive 0](前輪の切れ角はうなずきから決まる。--pitch を省くと直進)
+使い方: python car/render_car.py [--model car|trike] [--pitch 13] [--drive 0](前輪の切れ角はうなずきから決まる。--pitch を省くと直進)
 出力: out/car/views/{front34,side,top,front,rear34,ear}.png
 """
 from __future__ import annotations

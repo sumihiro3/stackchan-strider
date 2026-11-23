@@ -1,7 +1,7 @@
 """車の部品どうしの干渉と、寸法・質量・重心を確かめる。
 
 調べる姿勢: 車軸(=ターンテーブル)の回転 0〜315°(45° 刻み)× うなずき 0〜30°(2° 刻み)。前輪の切れ角はうなずきから決まる。
-使い方: python car/verify_car.py [--model car|car500|trike] [--json out/car/verify.json]
+使い方: python car/verify_car.py [--model car|trike] [--json out/car/verify.json]
 """
 from __future__ import annotations
 

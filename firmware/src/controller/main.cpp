@@ -1,5 +1,5 @@
 // 手もとのコントローラー。入力(input.h)を 0.05 秒ごとに読み、ESP-NOW でスタックチャンへ送る。
-// 入力は機器ごとに 1 つ: AtomS3 / M5StickC + Grove Thumb Joystick(input_joystick.cpp)、M5Stack StopWatch のタッチと傾き(input_stopwatch.cpp)。
+// 入力は機器ごとに 1 つ: M5Stack StopWatch のタッチと傾き(input_stopwatch.cpp)。
 #include <M5Unified.h>
 #include <Preferences.h>
 #include <WiFi.h>

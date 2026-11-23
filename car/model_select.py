@@ -1,10 +1,10 @@
-"""コマンドラインの --model で、使う車の設計モジュールを選ぶ(car = レトロカー、car500 = FIAT 500 風の小さい車)。"""
+"""コマンドラインの --model で、使う車の設計モジュールを選ぶ(car = レトロカー。トライクが部品を使う、trike = 逆三輪車)。"""
 from __future__ import annotations
 
 import importlib
 import sys
 
-MODELS = {"car": "car_design", "car500": "car500_design", "trike": "trike_design"}
+MODELS = {"car": "car_design", "trike": "trike_design"}
 
 
 def model_name(argv: list[str] | None = None) -> str:

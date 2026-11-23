@@ -1,5 +1,4 @@
 // コントローラーの入力。機器ごとに 1 つを選んでビルドする(platformio.ini の build_src_filter)。
-//  - input_joystick.cpp: AtomS3 / M5StickC + Grove Thumb Joystick(アナログ)
 //  - input_stopwatch.cpp: M5Stack StopWatch の画面のタッチと本体の傾き
 #pragma once
 
@@ -8,7 +7,7 @@ namespace input {
 struct Reading {
     int x = 0;          // -100(左)〜100(右)
     int y = 0;          // -100(後ろ)〜100(前)
-    bool stop = false;  // 止める(スティックの押し込み)
+    bool stop = false;  // 止める
 };
 
 /** M5.begin() のあとに 1 回呼ぶ。 */

@@ -1,7 +1,7 @@
 """印刷する部品を造形時の向きで STL に書き出し、色ごとのプレートに並べた 3MF と部品表を作る。
 
-使い方: python car/build_car.py [--model car|car500|trike] [--one-color] [--reference <Bambu Studio で P2S を選んで保存した .3mf>]
-  一部の部品だけの 3MF: python car/build_car.py --model car500 --only wheel_rear,wheel_front
+使い方: python car/build_car.py [--model car|trike] [--one-color] [--reference <Bambu Studio で P2S を選んで保存した .3mf>]
+  一部の部品だけの 3MF: python car/build_car.py --model trike --only wheel_rear,wheel_front
   --reference を渡すと、その 3MF のプロジェクト設定を car/bambu_p2s_settings.json に写して正本にする
 出力: out/car/stl/<部品>_x<個数>.stl(ベッド面 = z 0 の造形時の向き)、out/car/3mf/stackchan_car.3mf(グレー・赤・黒のプレート)、out/car/parts.json
 公開用に同じものを print_car/ へ写す(out/ は git の対象外)
@@ -275,7 +275,7 @@ def write_only(keys: list[str]) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", choices=list(model_select.MODELS), default="car", help="作る車(car = レトロカー、car500 = FIAT 500 風)")
+    parser.add_argument("--model", choices=list(model_select.MODELS), default="car", help="作る車(car = レトロカー、trike = 逆三輪車)")
     parser.add_argument("--reference", type=Path, help="Bambu Studio で P2S を選んで保存した 3MF(設定の正本を取り替えるとき)")
     parser.add_argument("--only", help="この部品だけの 3MF を別に作る(カンマ区切り。例 wheel_rear,wheel_front)。全体の出力は変えない")
     parser.add_argument("--one-color", action="store_true", help="色分けせず全部品を 1 色のプレートに並べた <PROJECT_NAME>_1color.3mf も作る")
