@@ -59,6 +59,14 @@ void test_trike_neutral_is_accepted() {
     TEST_ASSERT_FLOAT_WITHIN(0.01f, car::NEUTRAL_TRIKE_DEG, car::clampNeutral(car::NEUTRAL_TRIKE_DEG));
 }
 
+void test_timed_out_handles_newer_timestamp() {
+    // 受信のコールバックは loop() の外で時刻を記録するので、loop() が先に取った now より新しいことがある
+    TEST_ASSERT_FALSE(car::timedOut(1000, 1005, 500));  // now より 5 ms 新しい → 途切れていない
+    TEST_ASSERT_FALSE(car::timedOut(1000, 600, 500));   // 400 ms 前 → まだ
+    TEST_ASSERT_TRUE(car::timedOut(1000, 400, 500));    // 600 ms 前 → 途切れた
+    TEST_ASSERT_FALSE(car::timedOut(5, 0xFFFFFFF0u, 500));  // millis() が一周した直後
+}
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_drive_dead_zone_is_stop);
@@ -69,5 +77,6 @@ int main() {
     RUN_TEST(test_neutral_clamp);
     RUN_TEST(test_steer_reversed_swaps_left_and_right);
     RUN_TEST(test_trike_neutral_is_accepted);
+    RUN_TEST(test_timed_out_handles_newer_timestamp);
     return UNITY_END();
 }

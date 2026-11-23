@@ -1,6 +1,8 @@
 // スティックの値(-100〜100)を、首(ヨー)の回転の速さと、うなずき(かじ)の角度に直す。機器には依存しない。
 #pragma once
 
+#include <cstdint>
+
 namespace car {
 
 constexpr int DEAD_ZONE = 10;  // スティックのこの範囲(±)は中心とみなす
@@ -34,5 +36,11 @@ float pitchFromStick(int x, float neutral, bool reversed = false);
 
 /** 直進の角度を、受け付ける範囲に収める。 */
 float clampNeutral(float neutral);
+
+/**
+ * 最後に値が届いた時刻 since から limitMs より長くたったか。
+ * since が now より新しい(別のタスクが now を取ったあとに記録した)ときは、たっていないとみなす。millis() の一周にも耐える。
+ */
+bool timedOut(uint32_t now, uint32_t since, uint32_t limitMs);
 
 }  // namespace car

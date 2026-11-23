@@ -37,4 +37,8 @@ float pitchFromStick(int x, float neutral, bool reversed) {
 
 float clampNeutral(float neutral) { return clampFloat(neutral, NEUTRAL_MIN_DEG, NEUTRAL_MAX_DEG); }
 
+bool timedOut(uint32_t now, uint32_t since, uint32_t limitMs) {
+    return static_cast<int32_t>(now - since) > static_cast<int32_t>(limitMs);
+}
+
 }  // namespace car

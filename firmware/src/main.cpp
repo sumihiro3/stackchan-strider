@@ -23,6 +23,7 @@
 #include <cmath>
 
 #include "car_control.h"
+#include "espnow_pad.h"
 #include "gamepad.h"
 #include "pages.h"
 
@@ -36,6 +37,8 @@ constexpr uint32_t CONFIRM_SHOW_MS = 10000;  // 確認の画面を出してお�
 constexpr float PITCH_STEP_DEG = 0.5f;  // うなずきは、この角度以上変わったときだけ動かす
 constexpr uint32_t PITCH_INTERVAL_MS = 50;  // うなずきの命令の最短の間隔
 constexpr int PITCH_SPEED = 700;  // movePitch の速さ(0〜1000)
+constexpr uint32_t YAW_READY_MS = 2000;  // 電源を入れてから、首のサーボのモードを切り替えるまで待つ時間
+constexpr uint32_t ATOM_TIMEOUT_MS = 500;  // Atom の値(0.05 秒ごと)がこの時間途切れたら止める
 constexpr uint32_t PAD_BUBBLE_MS = 3000;  // パッドがつながったときの吹き出しを出しておく時間
 const IPAddress SETUP_IP(192, 168, 4, 1);
 const char* const MDNS_NAME = "strider";
@@ -54,7 +57,7 @@ bool steerReversed = false;  // 後輪でかじを取る車(トライク)では�
 bool smileWhileWalking = false;  // 走っている間は笑顔にするか(設定で切り替える。初期状態は変えない)
 
 // 操作。最後に動かしたほう(スマホかパッド)の値を使う
-enum class Source { None, Phone, Pad };
+enum class Source { None, Phone, Pad, Atom };
 Source activeSource = Source::None;
 int stickX = 0, stickY = 0;  // -100〜100
 int driveSigned = 0;  // 首の回転の速さ [%]。正 = 前進
@@ -65,6 +68,8 @@ uint32_t pitchSentMs = 0;
 uint32_t lastPhoneMs = 0;
 String stoppedPress;  // 最後に止めた「ひと押し」の番号。これと同じ番号の値は、離したあとに遅れて届いたものなので捨てる
 gamepad::State padState = gamepad::State::Searching;
+bool padStarted = false;  // BLE のパッドを探しているか。Atom を登録してあるときは探さない(下の startRadio)
+espnow_pad::State atomState = espnow_pad::State::Unpaired;
 uint32_t padBubbleUntilMs = 0;
 uint32_t restartAtMs = 0;  // 0 以外なら、この時刻に再起動する
 uint32_t qrUntilMs = 0;  // 0 以外なら、この時刻まで QR を表示している
@@ -117,7 +122,7 @@ void stopControl() { setControl(0, 0, Source::None); }
 
 // パッドのスティックが倒れている間は、スマホからの値を受け付けない
 bool padIsSteering() {
-    return activeSource == Source::Pad && (abs(stickX) > car::DEAD_ZONE || abs(stickY) > car::DEAD_ZONE);
+    return (activeSource == Source::Pad || activeSource == Source::Atom) && (abs(stickX) > car::DEAD_ZONE || abs(stickY) > car::DEAD_ZONE);
 }
 
 void setNeutral(float degrees) {
@@ -260,9 +265,10 @@ void sendJsonState() {
     char json[256];
     snprintf(json, sizeof(json),
              "{\"drive\":%d,\"pitch\":%.1f,\"neutral\":%.1f,\"rev\":%d,\"invert\":%d,\"smile\":%d,\"volt\":%.2f,\"pad\":%d,"
-             "\"padName\":\"%s\",\"padBusy\":%d}",
+             "\"padName\":\"%s\",\"padBusy\":%d,\"atom\":%d}",
              driveSigned, pitchTarget, neutralDeg, steerReversed ? 1 : 0, invertDirection ? 1 : 0, smileWhileWalking ? 1 : 0,
-             M5StackChan.getBatteryVoltage(), static_cast<int>(padState), padName, padIsSteering() ? 1 : 0);
+             M5StackChan.getBatteryVoltage(), padStarted ? static_cast<int>(padState) : 3, padName, padIsSteering() ? 1 : 0,
+             static_cast<int>(atomState));
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", json);
 }
@@ -297,6 +303,14 @@ void handleNeutral() {
         prefs.putBool("rev", steerReversed);
     }
     setNeutral(server.arg("deg10").toInt() / 10.0f);
+    sendJsonState();
+}
+
+void handleAtomForget() {
+    espnow_pad::forget();
+    if (activeSource == Source::Atom) {
+        stopControl();
+    }
     sendJsonState();
 }
 
@@ -373,6 +387,7 @@ void startServer() {
         server.on("/api/state", sendJsonState);
         server.on("/api/neutral", handleNeutral);
         server.on("/api/pad/forget", handlePadForget);
+        server.on("/api/atom/forget", handleAtomForget);
         server.on("/api/invert", handleInvert);
         server.on("/api/smile", handleSmile);
         server.on("/api/forget", handleForget);
@@ -391,6 +406,15 @@ void startServer() {
 }
 
 // ---------------------------------------------------------------- Wi-Fi
+// Atom の ESP-NOW を始める。BLE を使っていなければ、Wi-Fi の省電力の待ち受けを止めて、受け取りの遅れと取りこぼしを減らす
+// (BLE と同時に使うときは、省電力の待ち受けを止められない)
+void startEspNow() {
+    if (!padStarted) {
+        WiFi.setSleep(false);
+    }
+    espnow_pad::begin();
+}
+
 void startSetupMode() {
     mode = Mode::Setup;
     const uint64_t mac = ESP.getEfuseMac();
@@ -401,6 +425,7 @@ void startSetupMode() {
     WiFi.softAPConfig(SETUP_IP, SETUP_IP, IPAddress(255, 255, 255, 0));
     WiFi.softAP(setupSsid.c_str());
     dns.start(53, "*", SETUP_IP);
+    startEspNow();
     startServer();
     showSetupJoinScreen();
 }
@@ -419,6 +444,7 @@ bool connectHomeWifi(const String& ssid, const String& pass) {
 
 void startReadyMode() {
     mode = Mode::Ready;
+    startEspNow();
     MDNS.begin(MDNS_NAME);
     MDNS.addService("http", "tcp", 80);
     startServer();
@@ -433,7 +459,12 @@ void setup() {
     Serial.begin(115200);
     Serial.printf("[strider] board=%d rotation=%d width=%d height=%d\n", static_cast<int>(M5.getBoard()),
                   M5.Display.getRotation(), M5.Display.width(), M5.Display.height());
-    M5StackChan.Motion.rotateX(0);  // 首(ヨー)を連続回転モードにして止めておく
+    // 首(ヨー)を連続回転モードにして止めておく。電源を入れた直後はサーボがまだ応えず、モードの切り替え(初回の rotateX だけで行われる)が
+    // 失敗したまま記録されて、あとで回せなくなる。起動から YAW_READY_MS 待ってから切り替える
+    while (millis() < YAW_READY_MS) {
+        delay(10);
+    }
+    M5StackChan.Motion.rotateX(0);
     prefs.begin("strider", false);
     invertDirection = prefs.getBool("invert", false);
     smileWhileWalking = prefs.getBool("smile", false);
@@ -441,7 +472,11 @@ void setup() {
     neutralDeg = car::clampNeutral(prefs.getInt("neutral", static_cast<int>(std::lround(car::NEUTRAL_CAR500_DEG * 10))) / 10.0f);
     pitchTarget = neutralDeg;
     updatePitch(millis(), true);  // 起動したら、前輪をまっすぐにする
-    gamepad::begin();
+    // Atom を登録してあれば、BLE のパッドは探さない(上の startEspNow)
+    if (!espnow_pad::registered()) {
+        gamepad::begin();
+        padStarted = true;
+    }
     const String ssid = prefs.getString("ssid", "");
     if (!ssid.isEmpty() && connectHomeWifi(ssid, prefs.getString("pass", ""))) {
         startReadyMode();
@@ -480,11 +515,39 @@ void handleGamepad(uint32_t now) {
     }
 }
 
+// Atom の値を取り込む。途切れたら、Atom が操作していれば止める
+void handleAtom(uint32_t now) {
+    espnow_pad::update(now);
+    const espnow_pad::State state = espnow_pad::state(now);
+    if (state != atomState) {
+        atomState = state;
+        if (state == espnow_pad::State::Connected && avatarRunning) {
+            avatar.setSpeechText("Atom OK");
+            padBubbleUntilMs = now + PAD_BUBBLE_MS;
+        }
+    }
+    int x = 0, y = 0;
+    bool stop = false;
+    if (espnow_pad::takeStick(x, y, stop)) {
+        if (stop) {
+            x = y = 0;
+        }
+        const bool centred = abs(x) <= car::DEAD_ZONE && abs(y) <= car::DEAD_ZONE;
+        if (activeSource == Source::Atom || !centred) {
+            setControl(centred ? 0 : x, centred ? 0 : y, Source::Atom);  // 中心に戻したら、ほかの操作に譲る
+        }
+    }
+    if (activeSource == Source::Atom && car::timedOut(now, espnow_pad::lastStickMs(), ATOM_TIMEOUT_MS)) {
+        stopControl();
+    }
+}
+
 void loop() {
     M5StackChan.update();
     server.handleClient();
     const uint32_t now = millis();
     handleGamepad(now);
+    handleAtom(now);
     updatePitch(now);
 
     if (mode == Mode::Setup) {
@@ -502,7 +565,7 @@ void loop() {
         }
     } else {
         // スマホからの値が途切れたら止める(電波が切れた、ページを閉じた、など)
-        if (activeSource == Source::Phone && now - lastPhoneMs > COMMAND_TIMEOUT_MS) {
+        if (activeSource == Source::Phone && car::timedOut(now, lastPhoneMs, COMMAND_TIMEOUT_MS)) {
             stopControl();
         }
         if (qrUntilMs && now >= qrUntilMs) {
