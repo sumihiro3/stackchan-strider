@@ -35,6 +35,18 @@ float pitchFromStick(int x, float neutral, bool reversed) {
     return clampFloat(pitch, 0.0f, PITCH_MAX_DEG);
 }
 
+PivotCommand pivotFromStick(int x, int y, float straight, bool reversed) {
+    x = clampStick(reversed ? -x : x);
+    straight = clampFloat(straight, 0.0f, PITCH_MAX_DEG);
+    const int magnitude = x < 0 ? -x : x;
+    if (magnitude <= SPIN_THRESHOLD) {
+        return {driveFromStick(y), straight, false};
+    }
+    // しきい値の外側を、SPEED_MIN〜SPEED_MAX へ直線で割り当てる
+    const int speed = SPEED_MIN + (magnitude - SPIN_THRESHOLD - 1) * (SPEED_MAX - SPEED_MIN) / (100 - SPIN_THRESHOLD - 1);
+    return {x < 0 ? -speed : speed, PITCH_MAX_DEG, true};
+}
+
 float clampNeutral(float neutral) { return clampFloat(neutral, NEUTRAL_MIN_DEG, NEUTRAL_MAX_DEG); }
 
 bool timedOut(uint32_t now, uint32_t since, uint32_t limitMs) {

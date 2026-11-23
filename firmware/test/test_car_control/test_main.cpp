@@ -67,6 +67,73 @@ void test_timed_out_handles_newer_timestamp() {
     TEST_ASSERT_FALSE(car::timedOut(5, 0xFFFFFFF0u, 500));  // millis() が一周した直後
 }
 
+void test_pivot_centre_stops_at_the_straight_angle() {
+    const car::PivotCommand cmd = car::pivotFromStick(0, 0, 0.0f);
+    TEST_ASSERT_EQUAL_INT(0, cmd.drive);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, cmd.pitch);
+    TEST_ASSERT_FALSE(cmd.spin);
+}
+
+void test_pivot_forward_and_back_keep_the_head_level() {
+    // 前後は今までどおり走る。頭は直進の角度のまま(足は浮いている)
+    const car::PivotCommand forward = car::pivotFromStick(0, 100, 2.5f);
+    TEST_ASSERT_EQUAL_INT(car::SPEED_MAX, forward.drive);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 2.5f, forward.pitch);
+    TEST_ASSERT_FALSE(forward.spin);
+    TEST_ASSERT_EQUAL_INT(-car::SPEED_MAX, car::pivotFromStick(0, -100, 2.5f).drive);
+}
+
+void test_pivot_small_sideways_tilt_does_not_lower_the_foot() {
+    // 左右が SPIN_THRESHOLD 以下なら旋回しない。足を半端に下ろすと、直進中に地面をこする
+    const car::PivotCommand cmd = car::pivotFromStick(car::SPIN_THRESHOLD, 60, 0.0f);
+    TEST_ASSERT_FALSE(cmd.spin);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, cmd.pitch);
+    TEST_ASSERT_EQUAL_INT(car::driveFromStick(60), cmd.drive);
+    TEST_ASSERT_FALSE(car::pivotFromStick(-car::SPIN_THRESHOLD, 0, 0.0f).spin);
+}
+
+void test_pivot_sideways_spins_with_the_head_fully_up() {
+    // 右へ倒すと頭を上げきって前進(右の駆動輪が浮き、左の駆動輪が押して右へ回る)。左は後退
+    const car::PivotCommand right = car::pivotFromStick(100, 0, 0.0f);
+    TEST_ASSERT_TRUE(right.spin);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, car::PITCH_MAX_DEG, right.pitch);
+    TEST_ASSERT_EQUAL_INT(car::SPEED_MAX, right.drive);
+    const car::PivotCommand left = car::pivotFromStick(-100, 0, 0.0f);
+    TEST_ASSERT_TRUE(left.spin);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, car::PITCH_MAX_DEG, left.pitch);
+    TEST_ASSERT_EQUAL_INT(-car::SPEED_MAX, left.drive);
+}
+
+void test_pivot_spin_starts_at_min_speed_and_ignores_forward() {
+    TEST_ASSERT_EQUAL_INT(car::SPEED_MIN, car::pivotFromStick(car::SPIN_THRESHOLD + 1, 0, 0.0f).drive);
+    TEST_ASSERT_EQUAL_INT(-car::SPEED_MIN, car::pivotFromStick(-car::SPIN_THRESHOLD - 1, 0, 0.0f).drive);
+    // 旋回中は前後を使わない(足を下ろしたまま前後に進むと、足を引きずる)
+    TEST_ASSERT_EQUAL_INT(car::SPEED_MAX, car::pivotFromStick(100, -100, 0.0f).drive);
+}
+
+void test_pivot_reversed_swaps_the_spin_direction() {
+    TEST_ASSERT_EQUAL_INT(-car::SPEED_MAX, car::pivotFromStick(100, 0, 0.0f, true).drive);
+    TEST_ASSERT_EQUAL_INT(car::SPEED_MAX, car::pivotFromStick(-100, 0, 0.0f, true).drive);
+    // 前後の向きは変えない
+    TEST_ASSERT_EQUAL_INT(car::SPEED_MAX, car::pivotFromStick(0, 100, 0.0f, true).drive);
+}
+
+void test_pivot_never_leaves_limits() {
+    for (int x = -200; x <= 200; x += 13) {
+        for (int y = -200; y <= 200; y += 17) {
+            const car::PivotCommand cmd = car::pivotFromStick(x, y, 45.0f);
+            TEST_ASSERT_TRUE(cmd.pitch >= 0.0f && cmd.pitch <= car::PITCH_MAX_DEG);
+            TEST_ASSERT_TRUE(cmd.drive >= -car::SPEED_MAX && cmd.drive <= car::SPEED_MAX);
+        }
+    }
+}
+
+void test_pivot_straight_angle_can_be_zero() {
+    // 旋回車は頭が水平(0°)で直進する。直進の角度として 0° を保存できること
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, car::NEUTRAL_PIVOT_DEG, car::clampNeutral(car::NEUTRAL_PIVOT_DEG));
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, car::NEUTRAL_PIVOT_DEG);
+}
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_drive_dead_zone_is_stop);
@@ -78,5 +145,13 @@ int main() {
     RUN_TEST(test_steer_reversed_swaps_left_and_right);
     RUN_TEST(test_trike_neutral_is_accepted);
     RUN_TEST(test_timed_out_handles_newer_timestamp);
+    RUN_TEST(test_pivot_centre_stops_at_the_straight_angle);
+    RUN_TEST(test_pivot_forward_and_back_keep_the_head_level);
+    RUN_TEST(test_pivot_small_sideways_tilt_does_not_lower_the_foot);
+    RUN_TEST(test_pivot_sideways_spins_with_the_head_fully_up);
+    RUN_TEST(test_pivot_spin_starts_at_min_speed_and_ignores_forward);
+    RUN_TEST(test_pivot_reversed_swaps_the_spin_direction);
+    RUN_TEST(test_pivot_never_leaves_limits);
+    RUN_TEST(test_pivot_straight_angle_can_be_zero);
     return UNITY_END();
 }

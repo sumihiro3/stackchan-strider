@@ -58,20 +58,21 @@ details .card{margin-top:10px}
   <span style="right:3%;top:50%;transform:translateY(-50%)">右</span>
   <div class="knob" id="knob"></div>
 </div>
-<p class="note" style="text-align:center">指でつまみを動かします。上下で進む・下がる(倒すほど速い)、左右でかじを切ります。離すと止まります。</p>
+<p class="note" style="text-align:center">指でつまみを動かします。上下で進む・下がる(倒すほど速い)、左右でかじを切ります(旋回車は、大きく倒すとその場で回ります)。離すと止まります。</p>
 <div class="grow"></div>
 <details>
   <summary>設定</summary>
   <div class="card">
     <h2>車の種類(まっすぐ走るときの首の角度)</h2>
     <div class="seg" id="models">
-      <button data-deg10="126" data-rev="0">car500</button>
-      <button data-deg10="130" data-rev="0">レトロカー</button>
-      <button data-deg10="150" data-rev="1">トライク</button>
+      <button data-deg10="126" data-rev="0" data-pivot="0">car500</button>
+      <button data-deg10="130" data-rev="0" data-pivot="0">レトロカー</button>
+      <button data-deg10="150" data-rev="1" data-pivot="0">トライク</button>
+      <button data-deg10="0" data-rev="0" data-pivot="1">旋回車</button>
     </div>
     <h2>まっすぐ走らないときの微調整</h2>
     <div class="step"><button id="trim-l">← 左へ</button><output id="neutral-out"></output><button id="trim-r">右へ →</button></div>
-    <p class="note">まっすぐ進めたときに左へ曲がるなら「右へ」、右へ曲がるなら「左へ」を押します。本体に保存されます。</p>
+    <p class="note">まっすぐ進めたときに左へ曲がるなら「右へ」、右へ曲がるなら「左へ」を押します。本体に保存されます。旋回車では、まっすぐ走るときの頭の角度が変わります(「右へ」で頭が上がり、足が地面に近づきます)。</p>
     <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="invert">前進と後退を入れ替える</label>
     <p class="note">つまみを上へ動かして後ろへ進む場合にチェックします。</p>
     <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="smile">走っている間は笑顔にする</label>
@@ -87,14 +88,15 @@ const $ = (id) => document.getElementById(id);
 const call = (path) => fetch(path, { cache: "no-store" }).then((r) => r.json());
 const PAD_STATES = ["探しています", "つないでいます", "つながっています", "使っていません(StopWatch を登録してあるため)"];
 const ATOM_STATES = ["登録していません", "探しています", "つながっています"];
-let neutral10 = 126, rev = 0, held = false, x = 0, y = 0, timer = null, busy = false, press = "", waiting = false;
+let neutral10 = 126, rev = 0, pivot = 0, held = false, x = 0, y = 0, timer = null, busy = false, press = "", waiting = false;
 function show(s) {
   $("invert").checked = !!s.invert;
   $("smile").checked = !!s.smile;
   neutral10 = Math.round(s.neutral * 10);
   rev = s.rev ? 1 : 0;
+  pivot = s.pivot ? 1 : 0;
   $("neutral-out").textContent = s.neutral.toFixed(1) + "°";
-  document.querySelectorAll("#models button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.deg10) === neutral10 && Number(b.dataset.rev) === rev)));
+  document.querySelectorAll("#models button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.pivot) === pivot && (pivot ? true : Number(b.dataset.deg10) === neutral10 && Number(b.dataset.rev) === rev))));
   const moving = s.drive ? (s.drive > 0 ? "前進中" : "後退中") : "停止中";
   $("state").textContent = moving + " / かじ " + s.pitch.toFixed(1) + "° / 電池 " + s.volt.toFixed(2) + " V";
   $("pad").textContent = "ゲームパッド: " + (PAD_STATES[s.pad] || "-") + (s.padName ? "(" + s.padName + ")" : "");
@@ -156,7 +158,7 @@ document.addEventListener("selectstart", (event) => { if (event.target.closest("
 const setNeutral = (deg10, query = "") => call("/api/neutral?deg10=" + deg10 + query).then(show).catch(lost);
 $("models").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-deg10]");
-  if (button) setNeutral(Number(button.dataset.deg10), "&rev=" + button.dataset.rev);
+  if (button) setNeutral(Number(button.dataset.deg10), "&rev=" + button.dataset.rev + "&pivot=" + button.dataset.pivot);
 });
 // 前輪でかじを取る車は首の角度が大きいほど右へ切れる。後輪でかじを取るトライクは逆
 $("trim-l").onclick = () => setNeutral(neutral10 + (rev ? 5 : -5));
