@@ -60,7 +60,8 @@ MOVES: dict[str, list] = {
     "rail_R": _one(S_FRAME_RIGHT, 1, 2, (75, 0, 0)),
     # 駆動輪: 右はシャフトと一体で、右から通す。左は六角に押し込む
     "wheel_drive_shaft": _one(S_DRIVE_WHEELS, 0, 2, (150, 0, 0)),
-    "wheel_drive": _one(S_DRIVE_WHEELS, 1, 2, (-60, 0, 0)),
+    "wheel_drive": _one(S_DRIVE_WHEELS, 1, 3, (-60, 0, 0)),
+    "clip_drive": _one(S_DRIVE_WHEELS, 2, 3, (-25, 0, 0)),
     "wheel_aux_R": _one(S_AUX, 0, 2, (35, 0, 0)),
     "wheel_aux_L": _one(S_AUX, 0, 2, (-35, 0, 0)),
     "clip_aux_R": _one(S_AUX, 1, 2, (25, 0, 0)),
@@ -71,11 +72,14 @@ MOVES: dict[str, list] = {
     "wheel_trike": [_hover(S_FORK, 0.2, (40, 0, FORK_HOVER), _FORK), (S_FORK, 0.6, 0.2, _FORK, _UP)],
     "clip_trike": [_hover(S_FORK, 0.36, (25, 0, FORK_HOVER), _FORK), (S_FORK, 0.6, 0.2, _FORK, _UP)],
     "clip_king": [(S_FORK, 0.82, 0.14, (0, 0, 25), _UP)],
-    "coins": _one(S_COINS, 0, 1, (0, 0, 70)),
+    "coins": _one(S_COINS, 0, 2, (0, 0, 70)),
+    "cup_lid": _one(S_COINS, 1, 2, (0, 0, 40)),
     # スタックチャン: 浮かせたままレバーを差し、まとめて下ろす
     **{n: [_hover(S_LEVER, 0.04, (0, 0, SC_HOVER + 90), _SC), (S_STACKCHAN, 0.12, 0.45, _SC, _UP)]
        for n in ("sc_base", "sc_servo", "sc_head", "sc_core", "sc_face", "sc_eyes")},
-    "lever": [_hover(S_LEVER, 0.36, (40, 0, SC_HOVER), _SC), (S_STACKCHAN, 0.12, 0.45, _SC, _UP)],
+    "lever": [_hover(S_LEVER, 0.2, (40, 0, SC_HOVER), _SC), (S_STACKCHAN, 0.12, 0.45, _SC, _UP)],
+    "lever_peg": [_hover(S_LEVER, 0.4, (40, 0, SC_HOVER), _SC), (S_STACKCHAN, 0.12, 0.45, _SC, _UP)],
+    "lego_pin": [_hover(S_LEVER, 0.6, (40, 0, SC_HOVER), _SC), (S_STACKCHAN, 0.12, 0.45, _SC, _UP)],
     # 引き棒: 横板をフォークの腕のピンへ下ろし、上の端をたわませて J のピンをレバーへ差す
     "link": [(S_LINK, 0.06, 0.22, (14, 0, 40), (6, 0, 0)), (S_LINK, 0.32, 0.16, (6, 0, 0), _UP)],
     "clip_arm": [(S_LINK, 0.52, 0.18, (0, 0, 25), _UP)],
@@ -89,13 +93,13 @@ COIN_PART = "coins"
 
 def explode(name: str) -> list[float]:
     """「部品」の場面で、部品をばらして見せるずれ [mm]。"""
-    if name.startswith("sc_") or name in ("lever", "link", "clip_j"):
+    if name.startswith("sc_") or name in ("lever", "lever_peg", "lego_pin", "link", "clip_j"):
         return [0.0, 0.0, 230.0]
     if name in ("wheel_drive_shaft", "wheel_aux_R", "clip_aux_R"):
         return [45.0, 0.0, 0.0]
-    if name in ("wheel_drive", "wheel_aux_L", "clip_aux_L"):
+    if name in ("wheel_drive", "clip_drive", "wheel_aux_L", "clip_aux_L"):
         return [-45.0, 0.0, 0.0]
-    if name in ("bridge", "fork", "wheel_trike", "clip_trike", "clip_king", "clip_arm", COIN_PART):
+    if name in ("bridge", "cup_lid", "fork", "wheel_trike", "clip_trike", "clip_king", "clip_arm", COIN_PART):
         return [0.0, -50.0, 0.0]
     return [0.0, 0.0, 0.0]
 
@@ -140,7 +144,8 @@ def collect() -> dict:
     parts[COIN_PART] = dict(label="10 円玉", color="#b87333", printable=False, v=_b64(coin.vertices, np.float32), i=_b64(coin.faces, np.uint32))
     instances.append(dict(name=COIN_PART, part=COIN_PART, m=[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0], ex=explode(COIN_PART),
                           moves=[dict(step=s, start=a, span=b, origin=list(o), to=list(t)) for s, a, b, o, t in MOVES[COIN_PART]]))
-    printed = sum(p.count for p in defs.values() if p.printable)
+    unused = ("lever",) if c.LEVER_LEGO else ("lever_lego", "lever_peg")  # レバーは 2 種類のうち片方だけ刷る
+    printed = sum(p.count for k, p in defs.items() if p.printable and k not in unused)
     return dict(frames=FRAMES, parts=parts, instances=instances, ground=round(-c.GROUND_Z, 2), printed=printed, ghost=GHOST)
 
 
