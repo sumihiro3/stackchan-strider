@@ -46,4 +46,32 @@ int axisFromMillivolts(int mv, int centreMv, int spanMv);
  */
 bool isPressed(int xMv, int vccMv);
 
+/**
+ * 組にする申し込みを受け付ける電波の強さの下限 [dBm]。コントローラーをスタックチャンのすぐそばに置いたときだけ組にして、
+ * 展示会などで離れた所にある同じファームの機器を登録しないようにする。値は実機で決める(シリアルに rssi が出る)。
+ */
+constexpr int PAIR_RSSI_MIN = -50;
+
+enum class PairDecision : uint8_t {
+    Ignore,  // 返事をしない
+    Ack,     // すぐ返事をする(登録した相手)
+    Ask,     // 画面で人に確かめてから登録する
+};
+
+/**
+ * スタックチャンが組にする申し込み(Pair、または知らない相手からの Stick)を受けたときにどうするか。
+ * @param known 登録した相手から来た
+ * @param windowOpen 新しい相手を受け付けている(登録がない、または登録を消して 60 秒以内)
+ * @param rssi 受けた電波の強さ [dBm]
+ */
+PairDecision decidePairRequest(bool known, bool windowOpen, int rssi, int minRssi);
+
+/**
+ * コントローラーが PairAck を受け入れるか。組になったあとは受け入れない(相手を書き換えると、送る先が登録にない MAC になって途切れる)。
+ */
+bool acceptPairAck(bool paired, int rssi, int minRssi);
+
+/** 人が見比べるための、MAC の下 2 バイト(画面に 4 桁の 16 進で出す)。 */
+uint16_t shortId(const uint8_t mac[6]);
+
 }  // namespace stick_link

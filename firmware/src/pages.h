@@ -76,8 +76,8 @@ details .card{margin-top:10px}
     <p class="note">つまみを上へ動かして後ろへ進む場合にチェックします。</p>
     <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="smile">走っている間は笑顔にする</label>
     <button id="pad-forget">ゲームパッドを登録し直す</button>
-    <button id="atom-forget">Atom を登録し直す</button>
-    <p class="note">押してから 60 秒の間に、電源の入っている Atom を新しく登録します。BLE のゲームパッドに戻すときは、押したあと本体を再起動します。</p>
+    <button id="atom-forget">StopWatch を登録し直す</button>
+    <p class="note">押してから 60 秒の間に、すぐそばに置いた StopWatch を、本体の画面で確かめて新しく登録します。BLE のゲームパッドに戻すときは、押したあと本体を再起動します。</p>
     <button id="forget">Wi-Fi の設定をやり直す</button>
   </div>
 </details>
@@ -85,7 +85,7 @@ details .card{margin-top:10px}
 <script>
 const $ = (id) => document.getElementById(id);
 const call = (path) => fetch(path, { cache: "no-store" }).then((r) => r.json());
-const PAD_STATES = ["探しています", "つないでいます", "つながっています", "使っていません(Atom を登録してあるため)"];
+const PAD_STATES = ["探しています", "つないでいます", "つながっています", "使っていません(StopWatch を登録してあるため)"];
 const ATOM_STATES = ["登録していません", "探しています", "つながっています"];
 let neutral10 = 126, rev = 0, held = false, x = 0, y = 0, timer = null, busy = false, press = "", waiting = false;
 function show(s) {
@@ -98,7 +98,7 @@ function show(s) {
   const moving = s.drive ? (s.drive > 0 ? "前進中" : "後退中") : "停止中";
   $("state").textContent = moving + " / かじ " + s.pitch.toFixed(1) + "° / 電池 " + s.volt.toFixed(2) + " V";
   $("pad").textContent = "ゲームパッド: " + (PAD_STATES[s.pad] || "-") + (s.padName ? "(" + s.padName + ")" : "");
-  $("atom").textContent = "Atom: " + (ATOM_STATES[s.atom] || "-");
+  $("atom").textContent = "StopWatch: " + (ATOM_STATES[s.atom] || "-");
   busy = !!s.padBusy;
   $("joy").classList.toggle("busy", busy);
 }
@@ -163,7 +163,7 @@ $("trim-l").onclick = () => setNeutral(neutral10 + (rev ? 5 : -5));
 $("trim-r").onclick = () => setNeutral(neutral10 + (rev ? -5 : 5));
 $("invert").onchange = () => call("/api/invert?on=" + ($("invert").checked ? 1 : 0)).then(show).catch(lost);
 $("smile").onchange = () => call("/api/smile?on=" + ($("smile").checked ? 1 : 0)).then(show).catch(lost);
-$("atom-forget").onclick = () => call("/api/atom/forget").then((s) => { show(s); $("atom").textContent = "Atom: 登録を消しました。60 秒の間に、電源の入っている Atom を登録します"; }).catch(lost);
+$("atom-forget").onclick = () => call("/api/atom/forget").then((s) => { show(s); $("atom").textContent = "StopWatch: 登録を消しました。60 秒の間に、すぐそばに置いた StopWatch を登録します"; }).catch(lost);
 $("pad-forget").onclick = () => call("/api/pad/forget").then((s) => { show(s); $("pad").textContent = "ゲームパッドの登録を消しました。パッドをペアリング待ちにしてください"; }).catch(lost);
 $("forget").onclick = () => {
   if ($("forget").dataset.armed) { call("/api/forget").catch(() => {}); $("state").textContent = "設定を消しました。本体の画面の QR を読んでください"; }

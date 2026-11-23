@@ -36,6 +36,23 @@ bool takeStick(int& x, int& y, bool& stop);
 /** 最後に値が届いた時刻 [ms](まだなら 0)。 */
 uint32_t lastStickMs();
 
+/**
+ * 登録を待っている相手(近くから申し込んできた、知らないコントローラー)がいるか。
+ * いれば、画面で人に確かめてから acceptCandidate() か rejectCandidate() を呼ぶ。
+ * @param id 相手の MAC の下 2 バイト(コントローラーの画面に出る番号と同じ)
+ */
+bool pairCandidate(uint16_t& id);
+
+/** 待っている相手を登録する。返事(PairAck)は、相手の次の申し込みに返す。 */
+void acceptCandidate();
+
+/**
+ * 待っている相手を登録しない。
+ * @param remember true なら、受け付けている間、その相手からの申し込みを無視する(「やめる」を押したとき)。
+ *                 false なら、また申し込んできたら確かめ直す(確認の画面が時間切れになったとき)
+ */
+void rejectCandidate(bool remember);
+
 /** 登録を消し、しばらく(60 秒)新しい相手の申し込みを受け付ける。 */
 void forget();
 

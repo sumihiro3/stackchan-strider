@@ -61,4 +61,15 @@ int axisFromMillivolts(int mv, int centreMv, int spanMv) {
 
 bool isPressed(int xMv, int vccMv) { return xMv * 100 > vccMv * 85; }
 
+PairDecision decidePairRequest(bool known, bool windowOpen, int rssi, int minRssi) {
+    if (known) {
+        return PairDecision::Ack;
+    }
+    return windowOpen && rssi >= minRssi ? PairDecision::Ask : PairDecision::Ignore;
+}
+
+bool acceptPairAck(bool paired, int rssi, int minRssi) { return !paired && rssi >= minRssi; }
+
+uint16_t shortId(const uint8_t mac[6]) { return static_cast<uint16_t>(mac[4] << 8 | mac[5]); }
+
 }  // namespace stick_link

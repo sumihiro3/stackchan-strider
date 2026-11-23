@@ -15,6 +15,7 @@ namespace {
 
 constexpr uint32_t CONNECTED_MS = 500;
 constexpr uint32_t PAIR_WINDOW_MS = 60000;
+constexpr uint32_t ACK_INTERVAL_MS = 300;  // 登録した相手から値が届いている間、この間隔で PairAck を返す(相手の画面の「Linked」)
 const char* const PREFS_NS = "atom";
 
 portMUX_TYPE lock = portMUX_INITIALIZER_UNLOCKED;
@@ -30,6 +31,13 @@ bool fresh = false;
 uint32_t stickMs = 0;
 bool pairPending = false;
 uint8_t pairFrom[6];
+int pairRssi = 0;
+
+// loop() だけが触る
+bool hasCandidate = false;
+uint8_t candidate[6];
+bool hasRejected = false;
+uint8_t rejected[6];
 
 bool sameMac(const uint8_t* a, const uint8_t* b) { return std::memcmp(a, b, 6) == 0; }
 
@@ -61,6 +69,7 @@ void onReceive(const esp_now_recv_info_t* info, const uint8_t* data, int len) {
         // 申し込み。登録した相手(返事を取りこぼして申し込み直している)か、受け付けている間の新しい相手にだけ返事をする(update)。
         // 登録を消したあとも、Atom は前の登録のまま値(Stick)を送り続けるので、それも申し込みとして扱う
         std::memcpy(pairFrom, info->src_addr, 6);
+        pairRssi = info->rx_ctrl ? info->rx_ctrl->rssi : -127;
         pairPending = true;
     }
     portEXIT_CRITICAL(&lock);
@@ -95,43 +104,103 @@ void begin() {
     started = true;
 }
 
+namespace {
+
+bool windowOpen(uint32_t now) { return !hasPeer || (pairUntilMs && static_cast<int32_t>(pairUntilMs - now) > 0); }
+
+void registerPeer(const uint8_t* from) {
+    Preferences prefs;
+    prefs.begin(PREFS_NS, false);
+    prefs.putBytes("peer", from, 6);
+    prefs.end();
+    if (hasPeer) {
+        esp_now_del_peer(peer);
+    }
+    portENTER_CRITICAL(&lock);
+    std::memcpy(peer, from, sizeof(peer));
+    hasPeer = true;
+    portEXIT_CRITICAL(&lock);
+    pairUntilMs = 0;
+    addPeer(from);
+    Serial.printf("[atom] paired %02X:%02X:%02X:%02X:%02X:%02X\n", from[0], from[1], from[2], from[3], from[4], from[5]);
+}
+
+void sendAck(const uint8_t* to) {
+    uint8_t buf[stick_link::PACKET_SIZE];
+    const stick_link::Packet ack{stick_link::Kind::PairAck, 0, 0, 0, 0};
+    esp_now_send(to, buf, stick_link::encode(ack, buf, sizeof(buf)));
+}
+
+}  // namespace
+
 void update(uint32_t now) {
     if (!started) {
         return;
+    }
+    // ESP-NOW の届いた知らせ(MAC の ACK)は、登録していない相手にも無線の層で返る。
+    // コントローラーが「登録されて値が使われている」と分かるよう、登録した相手にだけ返事を送る
+    static uint32_t lastAckMs = 0;
+    const uint32_t lastStick = lastStickMs();
+    if (hasPeer && lastStick && !car::timedOut(now, lastStick, CONNECTED_MS) && car::timedOut(now, lastAckMs, ACK_INTERVAL_MS)) {
+        lastAckMs = now;
+        sendAck(peer);
+    }
+    if (hasCandidate && !windowOpen(now)) {
+        hasCandidate = false;
     }
     uint8_t from[6];
     portENTER_CRITICAL(&lock);
     const bool pending = pairPending;
     std::memcpy(from, pairFrom, sizeof(from));
+    const int rssi = pairRssi;
     pairPending = false;
     const bool known = hasPeer && sameMac(from, peer);
     portEXIT_CRITICAL(&lock);
     if (!pending) {
         return;
     }
-    const bool windowOpen = !hasPeer || (pairUntilMs && static_cast<int32_t>(pairUntilMs - now) > 0);
-    if (!known && !windowOpen) {
+    if (!known && hasRejected && sameMac(from, rejected) && windowOpen(now)) {
         return;
     }
-    if (!known) {
-        Preferences prefs;
-        prefs.begin(PREFS_NS, false);
-        prefs.putBytes("peer", from, sizeof(from));
-        prefs.end();
-        if (hasPeer) {
-            esp_now_del_peer(peer);
-        }
-        portENTER_CRITICAL(&lock);
-        std::memcpy(peer, from, sizeof(peer));
-        hasPeer = true;
-        portEXIT_CRITICAL(&lock);
-        pairUntilMs = 0;
-        Serial.printf("[atom] paired %02X:%02X:%02X:%02X:%02X:%02X\n", from[0], from[1], from[2], from[3], from[4], from[5]);
+    switch (stick_link::decidePairRequest(known, windowOpen(now), rssi, stick_link::PAIR_RSSI_MIN)) {
+        case stick_link::PairDecision::Ignore:
+            return;
+        case stick_link::PairDecision::Ask:
+            if (!hasCandidate) {
+                std::memcpy(candidate, from, sizeof(candidate));
+                hasCandidate = true;
+                Serial.printf("[atom] pair request %04X rssi=%d\n", stick_link::shortId(from), rssi);
+            }
+            return;
+        case stick_link::PairDecision::Ack:
+            break;
     }
     addPeer(from);
-    uint8_t buf[stick_link::PACKET_SIZE];
-    const stick_link::Packet ack{stick_link::Kind::PairAck, 0, 0, 0, 0};
-    esp_now_send(from, buf, stick_link::encode(ack, buf, sizeof(buf)));
+    sendAck(from);
+}
+
+bool pairCandidate(uint16_t& id) {
+    if (hasCandidate) {
+        id = stick_link::shortId(candidate);
+    }
+    return hasCandidate;
+}
+
+void acceptCandidate() {
+    if (hasCandidate) {
+        hasCandidate = false;
+        registerPeer(candidate);
+    }
+}
+
+void rejectCandidate(bool remember) {
+    if (hasCandidate) {
+        hasCandidate = false;
+        if (remember) {
+            std::memcpy(rejected, candidate, sizeof(rejected));
+            hasRejected = true;
+        }
+    }
 }
 
 State state(uint32_t now) {
@@ -175,6 +244,8 @@ void forget() {
     if (had && started) {
         esp_now_del_peer(old);  // Wi-Fi の内部のロックを取るので、割り込みを止めた中では呼ばない
     }
+    hasCandidate = false;
+    hasRejected = false;
     pairUntilMs = millis() + PAIR_WINDOW_MS;
     if (pairUntilMs == 0) {
         pairUntilMs = 1;

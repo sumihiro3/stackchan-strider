@@ -76,6 +76,7 @@ uint32_t qrUntilMs = 0;  // 0 以外なら、この時刻まで QR を表示し�
 int qrSecondsShown = -1;  // QR の画面にいま出している残り秒数(-1 = まだ出していない)
 uint32_t confirmUntilMs = 0;  // 0 以外なら、この時刻まで「Wi-Fi の設定を消しますか」を表示している
 bool avatarRunning = false;
+uint32_t pairConfirmUntilMs = 0;  // 0 以外なら、この時刻まで「コントローラーを登録しますか」を表示している
 
 // ---------------------------------------------------------------- 走る・曲がる
 void applyDrive() {
@@ -141,6 +142,8 @@ void stopAvatar() {
         avatarRunning = false;
         delay(200);
     }
+    // 顔の吹き出し(M5Stack-Avatar の Balloon)は、画面そのものの字の大きさを変えたまま戻さない。顔以外の画面を描く前に戻す
+    M5.Display.setTextSize(1);
 }
 
 void showFace() {
@@ -248,6 +251,45 @@ void showForgetConfirm() {
     M5.Display.setTextColor(TFT_WHITE, TFT_RED);
     M5.Display.drawString("消す", (ERASE_LEFT + ERASE_RIGHT) / 2, (CONFIRM_BUTTON_TOP + CONFIRM_BUTTON_BOTTOM) / 2);
     confirmUntilMs = millis() + CONFIRM_SHOW_MS;
+}
+
+constexpr uint32_t PAIR_CONFIRM_MS = 20000;
+
+// 近くから申し込んできたコントローラーを登録するか、人に確かめる。展示会などで、ほかの人の機器を取り違えないため
+void showPairConfirm(uint16_t id) {
+    stopAvatar();
+    qrUntilMs = 0;
+    M5.Display.fillScreen(TFT_WHITE);
+    // 16 px の字で 1 行に入るのは全角 19 字ほど(画面の幅 320 px)
+    drawCaption("コントローラーを登録しますか?", 160, 24);
+    char line[24];
+    std::snprintf(line, sizeof(line), "ID %04X", id);
+    drawCaption(line, 160, 56);
+    drawCaption("コントローラーの画面の番号と", 160, 92);
+    drawCaption("同じなら「登録」を押す", 160, 116);
+    const int height = CONFIRM_BUTTON_BOTTOM - CONFIRM_BUTTON_TOP;
+    M5.Display.drawRoundRect(CANCEL_LEFT, CONFIRM_BUTTON_TOP, CANCEL_RIGHT - CANCEL_LEFT, height, 10, TFT_BLACK);
+    M5.Display.fillRoundRect(ERASE_LEFT, CONFIRM_BUTTON_TOP, ERASE_RIGHT - ERASE_LEFT, height, 10, TFT_DARKGREEN);
+    M5.Display.setFont(&fonts::lgfxJapanGothic_24);
+    M5.Display.setTextDatum(textdatum_t::middle_center);
+    M5.Display.setTextColor(TFT_BLACK, TFT_WHITE);
+    M5.Display.drawString("やめる", (CANCEL_LEFT + CANCEL_RIGHT) / 2, (CONFIRM_BUTTON_TOP + CONFIRM_BUTTON_BOTTOM) / 2);
+    M5.Display.setTextColor(TFT_WHITE, TFT_DARKGREEN);
+    M5.Display.drawString("登録", (ERASE_LEFT + ERASE_RIGHT) / 2, (CONFIRM_BUTTON_TOP + CONFIRM_BUTTON_BOTTOM) / 2);
+    pairConfirmUntilMs = millis() + PAIR_CONFIRM_MS;
+}
+
+// 確認の画面を閉じて、いまのモードの画面に戻す
+void restoreScreen() {
+    if (mode == Mode::Setup) {
+        if (WiFi.softAPgetStationNum() > 0) {
+            showSetupPageScreen();
+        } else {
+            showSetupJoinScreen();
+        }
+    } else {
+        showFace();
+    }
 }
 
 // ---------------------------------------------------------------- ページと API
@@ -518,11 +560,31 @@ void handleGamepad(uint32_t now) {
 // Atom の値を取り込む。途切れたら、Atom が操作していれば止める
 void handleAtom(uint32_t now) {
     espnow_pad::update(now);
+    uint16_t candidateId = 0;
+    if (!pairConfirmUntilMs && !confirmUntilMs && !restartAtMs && espnow_pad::pairCandidate(candidateId)) {
+        stopControl();
+        showPairConfirm(candidateId);
+    } else if (pairConfirmUntilMs) {
+        const auto touch = M5.Touch.getDetail();
+        const bool inButtonRow = touch.y >= CONFIRM_BUTTON_TOP && touch.y <= CONFIRM_BUTTON_BOTTOM;
+        const bool accept = touch.wasPressed() && inButtonRow && touch.x >= ERASE_LEFT && touch.x <= ERASE_RIGHT;
+        const bool cancel = touch.wasPressed() && inButtonRow && touch.x >= CANCEL_LEFT && touch.x <= CANCEL_RIGHT;
+        const bool expired = static_cast<int32_t>(now - pairConfirmUntilMs) >= 0;
+        if (accept || cancel || expired || !espnow_pad::pairCandidate(candidateId)) {
+            if (accept) {
+                espnow_pad::acceptCandidate();
+            } else {
+                espnow_pad::rejectCandidate(cancel);
+            }
+            pairConfirmUntilMs = 0;
+            restoreScreen();
+        }
+    }
     const espnow_pad::State state = espnow_pad::state(now);
     if (state != atomState) {
         atomState = state;
         if (state == espnow_pad::State::Connected && avatarRunning) {
-            avatar.setSpeechText("Atom OK");
+            avatar.setSpeechText("StopWatch OK");
             padBubbleUntilMs = now + PAD_BUBBLE_MS;
         }
     }
@@ -555,7 +617,7 @@ void loop() {
         // スマホが設定用 Wi-Fi につながったら 2 歩目の画面へ、切れたら 1 歩目へ戻す
         static bool phoneJoined = false;
         const bool joined = WiFi.softAPgetStationNum() > 0;
-        if (joined != phoneJoined && !restartAtMs) {
+        if (joined != phoneJoined && !restartAtMs && !pairConfirmUntilMs) {
             phoneJoined = joined;
             if (joined) {
                 showSetupPageScreen();
@@ -588,7 +650,7 @@ void loop() {
                 confirmUntilMs = 0;
                 showFace();
             }
-        } else if (!restartAtMs) {
+        } else if (!restartAtMs && !pairConfirmUntilMs) {
             if (M5StackChan.TouchSensor.pressedFor(FORGET_HOLD_MS) && !holdHandled) {
                 holdHandled = true;
                 stopControl();

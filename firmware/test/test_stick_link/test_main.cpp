@@ -67,6 +67,28 @@ void test_press_is_above_normal_range() {
     TEST_ASSERT_FALSE(isPressed(1650, 3300));
 }
 
+void test_pair_request_decision() {
+    // 登録した相手には、遠くても返事をする(コントローラーが登録を消して申し込み直している)
+    TEST_ASSERT_EQUAL(PairDecision::Ack, decidePairRequest(true, false, -90, -50));
+    // 受け付けていない間は、知らない相手を無視する
+    TEST_ASSERT_EQUAL(PairDecision::Ignore, decidePairRequest(false, false, -20, -50));
+    // 受け付けていても、電波が弱い(離れている)相手は無視する
+    TEST_ASSERT_EQUAL(PairDecision::Ignore, decidePairRequest(false, true, -51, -50));
+    // 近くの知らない相手は、画面で確かめる
+    TEST_ASSERT_EQUAL(PairDecision::Ask, decidePairRequest(false, true, -50, -50));
+}
+
+void test_controller_accepts_ack_only_when_unpaired_and_near() {
+    TEST_ASSERT_TRUE(acceptPairAck(false, -30, -50));
+    TEST_ASSERT_FALSE(acceptPairAck(true, -30, -50));  // 組になったあとの返事で、相手を書き換えない
+    TEST_ASSERT_FALSE(acceptPairAck(false, -70, -50));
+}
+
+void test_short_id_is_last_two_bytes() {
+    const uint8_t mac[6] = {0x44, 0x1b, 0xf6, 0xe3, 0x1a, 0x2b};
+    TEST_ASSERT_EQUAL_HEX16(0x1a2b, shortId(mac));
+}
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_round_trip);
@@ -75,5 +97,8 @@ int main() {
     RUN_TEST(test_decode_rejects_unknown_kind_and_out_of_range);
     RUN_TEST(test_axis_centre_ends_and_clamp);
     RUN_TEST(test_press_is_above_normal_range);
+    RUN_TEST(test_pair_request_decision);
+    RUN_TEST(test_controller_accepts_ack_only_when_unpaired_and_near);
+    RUN_TEST(test_short_id_is_last_two_bytes);
     return UNITY_END();
 }
