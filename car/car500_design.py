@@ -20,7 +20,7 @@ base.FRONT_FENDER_DEG = (40.0, 150.0)  # 前のフェンダーの前端を短く
 
 from car_design import *  # noqa: E402,F403  configure() の後で読む(間隔から決まる値を新しい値で受け取る)
 from car_design import (  # noqa: E402
-    _ball, _bumper_bar, _crowned, _dome, _hood_snap_frame, _largest, _top_z, ring_sector_x,
+    _ball, _bumper_bar, _crowned, _hood_snap_frame, _largest, _top_z, ring_sector_x,
 )
 
 d = base.d
@@ -197,7 +197,7 @@ def body500_part() -> Manifold:
     dt = DETENT  # noqa: F405
     for sx in (1, -1):
         for sy in (1, -1):
-            body += _dome(sx * (SIDE_X - SKIN), sy * dt["y"], dt["z"], dt["r"], dt["h"], -sx)  # noqa: F405
+            body += detent_bump(sx * (SIDE_X - SKIN), sy * dt["y"], dt["z"], -sx)  # noqa: F405
     # 横棒の上へ下ろすブロックとツメ(レトロカーのボンネットと同じ。横棒と側板の台の床を貫く)
     x0, x1, _ = HOOD_BLOCK  # noqa: F405
     for sx in (1, -1):
@@ -243,6 +243,7 @@ def _rear_surface_y(x: float, z: float) -> float:
 HEADLIGHT_X, HEADLIGHT_Z = 21.0, 21.0
 BADGE_Z = 14.5  # ひげ形のモールと紋章の高さ
 BADGE_PEG = dict(x=7.0, r=1.0, depth=4.0)
+NOSE_FIT = 0.15  # 鼻の穴(ヘッドライト、モール)の半径すきま。殻を立てて印刷すると縦の穴になり、PRESS_FIT では固かった
 MIRROR_500 = dict(x=50.0, y=43.0, peg_r=1.5)
 BUMPER_BAR_R = 2.2
 BAR_Z = STAY_Z[0] + BUMPER_BAR_R  # noqa: F405  棒の中心(下面を腕の下面にそろえ、平らな面を下にして印刷する)
@@ -319,6 +320,7 @@ def bumper_front500_part() -> Manifold:
     for sx in (1, -1):
         part += box(sx * BUMPER_STAY_X - 2.5, sx * BUMPER_STAY_X + 2.5, WHEELBASE + 5.2, BUMPER_F_Y, STAY_Z[0], STAY_Z[1])  # noqa: F405
         part += snap_tenon(*_bumper_f_frame(sx), 10.0 + 0.2 + 0.2)  # noqa: F405
+        part += bumper_stop(sx, sum(STAY_Z) / 2, STAY_Z[1] - STAY_Z[0])  # noqa: F405
     return part
 
 
@@ -394,11 +396,11 @@ def body_decor_holes() -> Manifold:
     """殻にあける、飾りを差す穴(ピンより PRESS_FIT だけ太い)。"""
     holes = Manifold()
     for pose in headlight_poses():
-        holes += apply(headlight_socket(), pose)  # noqa: F405
+        holes += apply(headlight_socket(NOSE_FIT), pose)  # noqa: F405
     for sx in (1, -1):
         z = BADGE_Z + 0.012 * BADGE_PEG["x"] ** 2
         y = _front_surface_y(sx * BADGE_PEG["x"], z)
-        holes += cyl_y(BADGE_PEG["r"] + PRESS_FIT, y - BADGE_PEG["depth"] - 0.5, y + 1.0, sx * BADGE_PEG["x"], z)  # noqa: F405
+        holes += cyl_y(BADGE_PEG["r"] + NOSE_FIT, y - BADGE_PEG["depth"] - 0.5, y + 1.0, sx * BADGE_PEG["x"], z)  # noqa: F405
         tz = _top_z(shell_outer(), sx * WINDSHIELD_PEG["x"], WINDSHIELD_Y_500)  # noqa: F405
         holes += cyl(WINDSHIELD_PEG["r"] + PRESS_FIT, tz - WINDSHIELD_PEG["depth"] - 0.5, tz + 1.0).translate((sx * WINDSHIELD_PEG["x"], WINDSHIELD_Y_500, 0))  # noqa: F405
         mz = _top_z(shell_outer(), MIRROR_500["x"], MIRROR_500["y"])  # noqa: F405

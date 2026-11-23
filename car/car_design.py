@@ -146,11 +146,16 @@ SNAP_CLEAR = 0.2  # スナップのツメと角穴のすきま(片側)。返し(
 HOOD_SNAP_X = 26.0  # ボンネットのツメの |x|。横棒と側板の台の床を上から貫く
 HOOD_BLOCK = (23.0, 29.5, 14.0)  # ボンネットの内壁から横棒の上へ下ろすブロックの x と上端(下端は横棒の上面 + 0.2)
 LIP_LEN, LIP_T = 6.0, 1.6  # 前のボディの後ろ端の舌(後ろのボディの内面の内側へ入る)
-DETENT = dict(y=36.5, z=18.0, r=1.5, h=0.7, pad_x1=53.7)  # 後ろのボディの内壁の出っぱりと、側板の台の穴
+DETENT = dict(y=36.5, z=18.0, r=1.5, h=0.7, pad_x1=53.7)  # 後ろのボディの内壁の出っぱりと、側板の台の穴(半径 r + 0.1)
+# 出っぱりは 45° の円すい台(根元の半径 1.8、高さ 0.9)。殻を立てて刷っても下向きの面が 45° でサポートが要らない。
+# 0.7 mm の丸い出っぱりはサポートに埋もれ、外すときに一緒に取れた。台の穴へ 0.6 mm 掛かる(前は 0.4)
+DETENT_CONE = dict(base_r=1.8, h=0.9)
 FENDER_PEG_R, FENDER_PEG_DEG = 1.0, (30.0, 90.0, 150.0)  # 後ろのフェンダーのピン(ボディの横の壁に差す)
 FF_TENON_X, FF_PAD_Z = 7.5, (31.5, 34.0)  # 前のフェンダーのツメ(ナックルのローカル x)と、支柱の上の台の上下
 FF_STRUT_X = (2.5, 4.5)  # 支柱の x(ナックルのローカル。ツメの返し 6.3〜8.7 より内側)
 BUMPER_STAY_X = 14.0  # バンパーの腕の |x|
+BUMPER_STOP_W, BUMPER_STOP_L = 8.0, 3.0  # 前のバンパーの腕の先の段(角穴 5.4 mm より広い。横棒の前の面に当たって、奥まで入らない)
+FF_SEAT_GAP = 0.1  # 前のフェンダーのツメの返しと、台の下面のすきま(座が台の上面に載ったとき)
 BUMPER_F_POS, BUMPER_R_POS = (HOOD_NOSE_Y + 5.0, 0.0), (BODY_REAR_Y - 6.5, 6.0)  # 後ろはツメの返しがボディの底の丸みに当たらない高さ。両端の回り込みがボディの角に当たらない位置  # バンパーの中心 (y, z)
 BUMPER_R_STAY_Y1 = -61.0  # 後ろのバンパーの腕の先(ボディの背面の手前)
 BUMPER_R_BOSS_Y = -54.0  # 後ろのボディの背面の内側の台の内面(ツメの返しが掛かる)
@@ -185,18 +190,24 @@ def snap_tenon(origin, direction, width_axis, length: float, width: float = 5.0,
     return apply(profile.extrude(thick).translate((0, 0, -thick / 2)), _frame(origin, direction, width_axis))
 
 
+def bumper_stop(sx: float, z_mid: float, height: float) -> Manifold:
+    """前のバンパーの腕の先の段。ツメの根元(横棒の前の面の 0.2 mm 前)から前へ BUMPER_STOP_L。"""
+    x, y0 = sx * BUMPER_STAY_X, WHEELBASE + BOSS_R + 0.2
+    return box(x - BUMPER_STOP_W / 2, x + BUMPER_STOP_W / 2, y0, y0 + BUMPER_STOP_L, z_mid - height / 2, z_mid + height / 2)
+
+
 def snap_hole(origin, direction, width_axis, depth0: float, depth1: float, width: float = 5.0, thick: float = 3.0) -> Manifold:
     """snap_tenon の通る角穴(根元から depth0〜depth1 の範囲)。"""
     w, t = width / 2 + SNAP_CLEAR, thick / 2 + SNAP_CLEAR
     return apply(box(-w, w, depth0, depth1, -t, t), _frame(origin, direction, width_axis))
 
 
-def _dome(x_face: float, y: float, z: float, r: float, h: float, inward: float) -> Manifold:
-    """x = x_face の面から inward(±1)の向きに高さ h だけ出る、底の半径 r の丸い出っぱり。"""
-    rs = (r * r + h * h) / (2 * h)
-    sphere = Manifold.sphere(rs, 48).translate((x_face + inward * (h - rs), y, z))
-    lo, hi = sorted((x_face - inward * 0.05, x_face + inward * h))
-    return sphere ^ box(lo, hi, y - r - 1, y + r + 1, z - r - 1, z + r + 1)
+def detent_bump(x_face: float, y: float, z: float, inward: float) -> Manifold:
+    """殻の内壁(x = x_face)から inward(±1)の向きに出る、側板の台の穴にはまる出っぱり(45° の円すい台)。"""
+    base, h = DETENT_CONE["base_r"], DETENT_CONE["h"]
+    cone = Manifold.cylinder(h + 0.05, base + 0.05, base - h, 48).translate((0, 0, -0.05))  # 根元は壁へ 0.05 食い込ませる
+    to_x = np.array([[0, 0, inward, x_face], [0, 1, 0, y], [-inward, 0, 0, z]], dtype=np.float64)
+    return cone.transform(to_x)
 
 
 def _largest(shape: Manifold) -> Manifold:
@@ -438,7 +449,7 @@ def body_rear_part() -> Manifold:
     dt = DETENT
     for sx in (1, -1):
         for sy in (1, -1):
-            body += _dome(sx * (BODY_HALF_W - SKIN), sy * dt["y"], dt["z"], dt["r"], dt["h"], -sx)
+            body += detent_bump(sx * (BODY_HALF_W - SKIN), sy * dt["y"], dt["z"], -sx)
     return _largest(body)
 
 
@@ -538,8 +549,12 @@ def fender_front_part() -> Manifold:
     """右前のサイクルフェンダー(ローカル: ナックルと同じ。キングピンの軸 = Z)。"""
     section = _crowned(*FENDER_X, FENDER_R, FENDER_T, 2.0)
     fender = ring_sector_x(section, *FRONT_FENDER_DEG).translate((-KINGPIN_X, 0, 0))
-    tenon = snap_tenon(*_ff_snap_frame(), FF_SNAP_LEN, thick=2.4).trim_by_plane((1, 0, 0), FENDER_X[0] - KINGPIN_X)  # 縁から出さない(内側の縁を下にして印刷する)
-    return fender + tenon  # 支柱の上の台を貫く
+    x0 = FENDER_X[0] - KINGPIN_X
+    # ツメは台の角穴(厚み 2.8 mm)いっぱいの 2.3 mm にする。縁から出さない(内側の縁を下にして印刷する)
+    tenon = snap_tenon(*_ff_snap_frame(), FF_SNAP_LEN - 0.2 + FF_SEAT_GAP, thick=2.6).trim_by_plane((1, 0, 0), x0)
+    # 座: フェンダーの内面から台の上面まで下ろした台。ツメの返しとで台を挟み、がたつきを止め、ツメの根元も太くする
+    seat = box(x0, FF_TENON_X + 3.0, -5.0, 5.0, FF_PAD_Z[1], FENDER_R + 1.0) ^ cyl_x(FENDER_R + 0.5, x0, FF_TENON_X + 3.0)
+    return fender + seat + tenon  # 支柱の上の台を貫く
 
 
 # ---------------------------------------------------------------- 小物(グレー)
@@ -604,6 +619,7 @@ def bumper_front_part() -> Manifold:
     for sx in (1, -1):
         part += box(sx * BUMPER_STAY_X - 2.5, sx * BUMPER_STAY_X + 2.5, WHEELBASE + 5.2, y, z + STAY_Z[0], z + STAY_Z[1])
         part += snap_tenon(*_bumper_f_snap_frame(sx), 10.0 + 0.2 + 0.2)
+        part += bumper_stop(sx, z + sum(STAY_Z) / 2, STAY_Z[1] - STAY_Z[0])
     return part
 
 
@@ -665,9 +681,9 @@ def headlight_part() -> Manifold:
 
 
 @lru_cache(maxsize=None)
-def headlight_socket() -> Manifold:
-    """ヘッドライトを差す穴(部品を PRESS_FIT だけ太らせた形)。"""
-    return headlight_part().minkowski_sum(Manifold.cube((2 * PRESS_FIT,) * 3, True))
+def headlight_socket(fit: float = PRESS_FIT) -> Manifold:
+    """ヘッドライトを差す穴(部品を fit だけ太らせた形)。"""
+    return headlight_part().minkowski_sum(Manifold.cube((2 * fit,) * 3, True))
 
 
 MIRROR_PEG_R = 1.5

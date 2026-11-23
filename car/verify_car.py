@@ -41,6 +41,23 @@ def collisions(drive: float, pitch: float):
     return hits
 
 
+def _touches(moving: str, fixed: str, shift) -> bool:
+    """組み上がった位置から moving を shift [mm] だけずらすと fixed に食い込むか(=そこで止まるか)。"""
+    shapes = {i.name: c.placed(i) for i in c.instances() if i.name in (moving, fixed)}
+    return (shapes[moving].translate(shift) ^ shapes[fixed]).volume() > VOLUME_TOL
+
+
+def fit_checks() -> list[tuple[str, bool]]:
+    """はめ込みの止まり方。組み上がった位置より奥へ押し込めないこと、がたつかないことを確かめる。"""
+    bumper = "bumper_front500" if any(i.name == "bumper_front500" for i in c.instances()) else "bumper_front"
+    checks = [(f"{bumper} を 1 mm 奥へ押すと横棒に当たる(腕の段で止まる)", _touches(bumper, "beam", (0, -1.0, 0)))]
+    body = "body500" if bumper == "bumper_front500" else "body_rear"
+    for tag in ("R", "L"):
+        checks.append((f"{body} を 0.3 mm 持ち上げると出っぱりが rail_{tag} の台に掛かる", _touches(body, f"rail_{tag}", (0, 0, 0.3))))
+        checks.append((f"fender_front_{tag} を 0.3 mm 下げると台に当たる(座で止まる)", _touches(f"fender_front_{tag}", f"knuckle_{tag}", (0, 0, -0.3))))
+    return checks
+
+
 def summary() -> dict:
     defs = c.part_defs()
     lo, hi = np.full(3, 1e9), np.full(3, -1e9)
@@ -80,6 +97,10 @@ def main() -> int:
     s = summary()
     print(f"全長 {s['length']:.1f} 全幅 {s['width']:.1f} 全高 {s['height']:.1f} mm  印刷部品 {s['printed_g']} g  おもり {s['extra_g']} g  合計 {s['total_g']} g")
     print(f"重心 {s['center_mm']}(地面から {s['center_height_mm']} mm)  後輪にかかる重さの割合 {s['rear_axle_load']:.0%}(前輪 {1 - s['rear_axle_load']:.0%})  地面に近い部品 {s['lowest']}")
+    fits = fit_checks()
+    print("はめ込み:")
+    for label, ok in fits:
+        print(f"  [{'OK' if ok else 'NG'}] {label}")
     found = {}
     lo, hi = (int(v) for v in c.NOD_RANGE)
     for drive in range(0, 360, 45):
@@ -98,7 +119,7 @@ def main() -> int:
     if args.json:
         with open(args.json, "w", encoding="utf-8") as f:
             json.dump(dict(summary=s, collisions=[dict(a=a, b=b, volume=v, drive=dr, steer=st, pitch=pi) for (a, b), (v, dr, st, pi) in found.items()]), f, ensure_ascii=False, indent=1)
-    return 0 if not found else 1
+    return 0 if not found and all(ok for _, ok in fits) else 1
 
 
 if __name__ == "__main__":
