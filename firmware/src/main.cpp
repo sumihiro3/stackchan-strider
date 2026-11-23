@@ -281,7 +281,7 @@ void showPairConfirm(uint16_t id) {
 
 // 確認の画面を閉じて、いまのモードの画面に戻す
 void restoreScreen() {
-    if (mode == Mode::Setup) {
+    if (mode == Mode::Setup && atomState != espnow_pad::State::Connected) {
         if (WiFi.softAPgetStationNum() > 0) {
             showSetupPageScreen();
         } else {
@@ -582,10 +582,20 @@ void handleAtom(uint32_t now) {
     }
     const espnow_pad::State state = espnow_pad::state(now);
     if (state != atomState) {
+        const bool wasConnected = atomState == espnow_pad::State::Connected;
         atomState = state;
-        if (state == espnow_pad::State::Connected && avatarRunning) {
-            avatar.setSpeechText("StopWatch OK");
-            padBubbleUntilMs = now + PAD_BUBBLE_MS;
+        const bool busy = pairConfirmUntilMs || confirmUntilMs || restartAtMs;
+        if (state == espnow_pad::State::Connected) {
+            // StopWatch で操作できるなら、スマホ向けの QR(操作ページ・Wi-Fi の設定)は要らない。顔に戻す
+            if (!avatarRunning && !busy) {
+                showFace();
+            }
+            if (avatarRunning) {
+                avatar.setSpeechText("StopWatch OK");
+                padBubbleUntilMs = now + PAD_BUBBLE_MS;
+            }
+        } else if (wasConnected && mode == Mode::Setup && avatarRunning && !busy) {
+            restoreScreen();  // StopWatch が切れたら、Wi-Fi の設定の画面に戻す
         }
     }
     int x = 0, y = 0;
