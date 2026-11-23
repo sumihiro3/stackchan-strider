@@ -1,0 +1,337 @@
+{
+ "parts": [
+  {
+   "key": "rail_R",
+   "label": "右の側板(後ろに補助輪、前にてこの支点)",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    84.5,
+    60.9,
+    14.3
+   ],
+   "volume_cm3": 17.78,
+   "overhang_mm2": 4.4,
+   "bed_mm2": 3513.8,
+   "orientation": "内面を下(てこの支点と補助輪のピンを上へ立てる)",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "rail_L",
+   "label": "左の側板(前に補助輪)",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    59.9,
+    84.5,
+    14.3
+   ],
+   "volume_cm3": 16.39,
+   "overhang_mm2": 4.4,
+   "bed_mm2": 3242.9,
+   "orientation": "内面を下(補助輪のピンを上へ立てる)",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "yoke",
+   "label": "ヨーク(walker と同じ)",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    106.8,
+    89.4,
+    59.6
+   ],
+   "volume_cm3": 20.86,
+   "overhang_mm2": 43.7,
+   "bed_mm2": 1521.2,
+   "orientation": "カラーを下、パッドを上",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "wheel_drive_shaft",
+   "label": "右の駆動輪と六角シャフトの一体(trike と同じ)",
+   "color": "black",
+   "count": 1,
+   "size_mm": [
+    60.0,
+    60.0,
+    139.0
+   ],
+   "volume_cm3": 26.31,
+   "overhang_mm2": 49.3,
+   "bed_mm2": 2013.1,
+   "orientation": "外の面を下、シャフトを立てる",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "wheel_drive",
+   "label": "左の駆動輪(六角穴。trike の 1 回目と同じ)",
+   "color": "black",
+   "count": 1,
+   "size_mm": [
+    60.0,
+    60.0,
+    17.1
+   ],
+   "volume_cm3": 19.19,
+   "overhang_mm2": 47.8,
+   "bed_mm2": 1990.2,
+   "orientation": "外の面を下",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "wheel_aux",
+   "label": "補助輪(trike と同じ。左前と右後ろ)",
+   "color": "black",
+   "count": 2,
+   "size_mm": [
+    18.0,
+    18.0,
+    6.0
+   ],
+   "volume_cm3": 1.19,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 151.6,
+   "orientation": "外の面を下",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "lever_R",
+   "label": "頭の右のレバー",
+   "color": "red",
+   "count": 1,
+   "size_mm": [
+    42.0,
+    36.0,
+    33.6
+   ],
+   "volume_cm3": 2.84,
+   "overhang_mm2": 32.6,
+   "bed_mm2": 469.0,
+   "orientation": "頭の側の面を下(ピンを上へ立てる)",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "link",
+   "label": "引き板",
+   "color": "red",
+   "count": 1,
+   "size_mm": [
+    8.0,
+    100.3,
+    3.0
+   ],
+   "volume_cm3": 2.21,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 724.8,
+   "orientation": "寝かせる",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "rocker",
+   "label": "引かれる腕(側板の外)",
+   "color": "red",
+   "count": 1,
+   "size_mm": [
+    28.0,
+    14.0,
+    9.8
+   ],
+   "volume_cm3": 0.94,
+   "overhang_mm2": 4.4,
+   "bed_mm2": 239.5,
+   "orientation": "内面を下(ピンを上へ立てる)",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "foot",
+   "label": "足の腕(側板の内側。軸つき)",
+   "color": "red",
+   "count": 1,
+   "size_mm": [
+    21.0,
+    13.0,
+    24.1
+   ],
+   "volume_cm3": 2.53,
+   "overhang_mm2": 4.4,
+   "bed_mm2": 187.6,
+   "orientation": "内側の面を下(軸を上へ立てる)",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "deck",
+   "label": "デッキ(walker と同じ)",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    106.8,
+    74.0,
+    16.5
+   ],
+   "volume_cm3": 18.06,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 5365.6,
+   "orientation": "そのまま(ボスを上)",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "gear_table",
+   "label": "ターンテーブル歯車(walker と同じ)",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    82.0,
+    82.0,
+    20.5
+   ],
+   "volume_cm3": 21.56,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 5213.6,
+   "orientation": "円板を下、歯と軸を上",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "socket_frame",
+   "label": "ソケット枠(walker と同じ)",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    82.0,
+    82.0,
+    7.8
+   ],
+   "volume_cm3": 14.87,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 2043.7,
+   "orientation": "上面を下、ツメを上",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "pinion",
+   "label": "ピニオン(walker と同じ)",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    42.5,
+    42.5,
+    73.0
+   ],
+   "volume_cm3": 10.47,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 923.4,
+   "orientation": "背面を下、歯と筒を上",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "sleeve",
+   "label": "スリーブ(walker と同じ)",
+   "color": "gray",
+   "count": 1,
+   "size_mm": [
+    18.0,
+    18.0,
+    28.4
+   ],
+   "volume_cm3": 2.13,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 53.3,
+   "orientation": "立てる",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  },
+  {
+   "key": "clip",
+   "label": "C クリップ(walker と同じ)",
+   "color": "gray",
+   "count": 5,
+   "size_mm": [
+    9.0,
+    9.2,
+    1.0
+   ],
+   "volume_cm3": 0.05,
+   "overhang_mm2": 0.0,
+   "bed_mm2": 48.1,
+   "orientation": "寝かせる",
+   "support": false,
+   "watertight": true,
+   "fits_bed": true
+  }
+ ],
+ "plates": [
+  {
+   "plate": 1,
+   "name": "Gray #9a9a96",
+   "color": "gray",
+   "support": false,
+   "parts": 13,
+   "contents": {
+    "deck": 1,
+    "gear_table": 1,
+    "rail_R": 1,
+    "rail_L": 1,
+    "yoke": 1,
+    "socket_frame": 1,
+    "pinion": 1,
+    "sleeve": 1,
+    "clip": 5
+   }
+  },
+  {
+   "plate": 2,
+   "name": "Red #c8372d",
+   "color": "red",
+   "support": false,
+   "parts": 4,
+   "contents": {
+    "link": 1,
+    "lever_R": 1,
+    "rocker": 1,
+    "foot": 1
+   }
+  },
+  {
+   "plate": 3,
+   "name": "Black #26262a",
+   "color": "black",
+   "support": false,
+   "parts": 4,
+   "contents": {
+    "wheel_drive_shaft": 1,
+    "wheel_drive": 1,
+    "wheel_aux": 2
+   }
+  }
+ ]
+}

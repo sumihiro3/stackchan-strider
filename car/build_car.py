@@ -321,8 +321,12 @@ def main() -> int:
         by_color[r["color"]] = by_color.get(r["color"], 0) + r["volume_cm3"] * r["count"]
     print("色ごとの体積(cm3): " + "、".join(f"{k} {v:.1f}" for k, v in by_color.items()))
     publish = c.PUBLISH
+    # 公開先は作り直すが、--only で作った一部の部品だけの 3MF は残す(消えて作り直しになった)。全体の 3MF はこのあと上書きする
+    kept = {p.name: p.read_bytes() for p in publish.glob("*.3mf")} if publish.exists() else {}
     shutil.rmtree(publish, ignore_errors=True)
     shutil.copytree(out, publish / "stl")
+    for name, data in kept.items():
+        (publish / name).write_bytes(data)
     shutil.copy2(c.OUT / "3mf" / f"{c.PROJECT_NAME}.3mf", publish)
     shutil.copy2(c.OUT / "parts.json", publish)
     if args.one_color:
