@@ -4,7 +4,7 @@ from __future__ import annotations
 import importlib
 import sys
 
-MODELS = {"car": "car_design", "car500": "car500_design"}
+MODELS = {"car": "car_design", "car500": "car500_design", "trike": "trike_design"}
 
 
 def model_name(argv: list[str] | None = None) -> str:

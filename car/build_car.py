@@ -1,6 +1,6 @@
 """印刷する部品を造形時の向きで STL に書き出し、色ごとのプレートに並べた 3MF と部品表を作る。
 
-使い方: python car/build_car.py [--model car|car500] [--reference <Bambu Studio で P2S を選んで保存した .3mf>]
+使い方: python car/build_car.py [--model car|car500|trike] [--one-color] [--reference <Bambu Studio で P2S を選んで保存した .3mf>]
   一部の部品だけの 3MF: python car/build_car.py --model car500 --only wheel_rear,wheel_front
   --reference を渡すと、その 3MF のプロジェクト設定を car/bambu_p2s_settings.json に写して正本にする
 出力: out/car/stl/<部品>_x<個数>.stl(ベッド面 = z 0 の造形時の向き)、out/car/3mf/stackchan_car.3mf(グレー・赤・黒のプレート)、out/car/parts.json
@@ -98,6 +98,10 @@ ENGLISH_NAMES = {
     "windshield500": "Windshield (500)", "top500": "Folded canvas top", "mirror500_R": "Door mirror R", "mirror500_L": "Door mirror L",
     "ballast_lid": "Ballast lid",
 }
+# 車ごとの印刷の向きと英語名。設計モジュールの PRINT_POSE_OVERRIDE は {部品: (行列の名前, 向きの説明, サポートの要否)}
+_POSES = {"Z_UP": Z_UP, "Z_DOWN": Z_DOWN, "X_UP": X_UP, "X_DOWN": X_DOWN, "Y_UP": Y_UP, "Y_DOWN": Y_DOWN}
+PRINT_POSE.update({k: (_POSES[m], how, sup) for k, (m, how, sup) in getattr(c, "PRINT_POSE_OVERRIDE", {}).items()})
+ENGLISH_NAMES.update(getattr(c, "ENGLISH_NAMES", {}))
 PLATE_ORDER = c.PLATE_ROLES  # フィラメント 1〜3 の順
 # 部品どうしの間隔 [mm]。自動ブリム(最大 brim_width)が両隣の部品から伸びても重ならない幅にする。
 # 5 mm ではブリムどうしが重なり、Bambu Studio で「パスの競合」になった。
@@ -182,6 +186,75 @@ def write_plates(defs, shapes, meshes, project: str | None = None) -> list[dict]
     return result
 
 
+def nest_hard(items, tries: int = 400) -> list:
+    """wb.nest で 2 枚以上になるとき、大きい順を少しずつ崩した並べ方を tries 通りまで試し、1 枚に収まった時点で返す。
+
+    walker/build.py の nest は 14 通りしか試さないので、1 枚に余裕を持って並べたいプレートで使う(walker/ は書き換えない)。
+    """
+    best = wb.nest(items)
+    if len(best) == 1:
+        return best
+    numbers = list(items)
+    area = {n: int(items[n][1].sum()) for n in numbers}
+    base = sorted(numbers, key=lambda n: -area[n])
+    rng = np.random.default_rng(7)
+    for _ in range(tries):
+        order = list(base)
+        for _ in range(4):
+            i, j = rng.integers(0, len(order), 2)
+            order[i], order[j] = order[j], order[i]
+        plates = wb._nest(items, order)
+        if (len(plates), len(plates[-1])) < (len(best), len(best[-1])):
+            best = plates
+        if len(best) == 1:
+            break
+    return best
+
+
+def write_one_color(defs, shapes, meshes) -> list[dict]:
+    """色分けせず、全部品をフィラメント 1 のプレートに載せた <PROJECT_NAME>_1color.3mf を書く(1 色での試し刷り用)。
+
+    設計モジュールの ONE_COLOR_PLATES [(プレート名, 部品の一覧 | None)] で、プレートを分ける(None = 残り全部)。
+    ONE_COLOR_MARGIN があれば、ベッドの端からの余白をそれにする(端は糸を引きやすいので広く取る)。
+    """
+    groups = getattr(c, "ONE_COLOR_PLATES", [("All", None)])
+    listed = {k for _, keys in groups if keys for k in keys}
+    margin = wb.PLATE_MARGIN
+    wb.PLATE_MARGIN = getattr(c, "ONE_COLOR_MARGIN", margin)
+    plates, result = [], []
+    try:
+        for group, keys in groups:
+            members = [k for k in shapes if (k in keys if keys else k not in listed)]
+            for support in (False, True):
+                items = {}
+                for key in members:
+                    if PLATE_GROUP.get(key, PRINT_POSE[key][2]) != support:
+                        continue
+                    mask = wb._footprint(shapes[key])
+                    for _ in range(defs[key].count):
+                        items[len(items)] = (key, mask)
+                if not items:
+                    continue
+                wb.PLATE_GAP = PLATE_GAP[support]
+                packed = nest_hard(items)
+                for number, plate in enumerate(packed, start=1):
+                    name = group + (" support" if support else "") + (f" {number}" if len(packed) > 1 else "")
+                    plates.append((name, 1, [(ENGLISH_NAMES[key], meshes[key], k, x, y, shapes[key]) for key, k, x, y in plate]))
+                    counts = {}
+                    for key, *_ in plate:
+                        counts[key] = counts.get(key, 0) + 1
+                    result.append(dict(plate=len(plates), name=name, support=support, parts=len(plate), contents=counts))
+    finally:
+        wb.PLATE_MARGIN = margin
+    wb.project_settings_text = _project_settings_text
+    wb.BS_VERSION = json.loads(P2S_SETTINGS.read_text(encoding="utf-8"))["version"]
+    path = c.OUT / "3mf" / f"{c.PROJECT_NAME}_1color.3mf"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.unlink(missing_ok=True)
+    wb.write_bambu_project(path, plates)
+    return result
+
+
 def write_only(keys: list[str]) -> int:
     """指定した部品だけを並べた 3MF を <PROJECT_NAME>_<部品>.3mf として作り、公開先にも写す(試し刷り用)。"""
     defs = c.part_defs()
@@ -205,6 +278,7 @@ def main() -> int:
     parser.add_argument("--model", choices=list(model_select.MODELS), default="car", help="作る車(car = レトロカー、car500 = FIAT 500 風)")
     parser.add_argument("--reference", type=Path, help="Bambu Studio で P2S を選んで保存した 3MF(設定の正本を取り替えるとき)")
     parser.add_argument("--only", help="この部品だけの 3MF を別に作る(カンマ区切り。例 wheel_rear,wheel_front)。全体の出力は変えない")
+    parser.add_argument("--one-color", action="store_true", help="色分けせず全部品を 1 色のプレートに並べた <PROJECT_NAME>_1color.3mf も作る")
     args = parser.parse_args()
     if args.only:
         return write_only(args.only.split(","))
@@ -234,6 +308,8 @@ def main() -> int:
                          orientation=how, support=support,
                          watertight=bool(mesh.is_watertight), fits_bed=bool(size[0] <= BED and size[1] <= BED and size[2] <= BED)))
     plates = write_plates(defs, shapes, meshes)
+    if args.one_color:
+        one = write_one_color(defs, shapes, meshes)
     (c.OUT / "parts.json").write_text(json.dumps(dict(parts=rows, plates=plates), ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"{'部品':22s} 色     個数  幅×奥×高 mm            体積 cm3  張り出し mm2  接地 mm2  サポート  向き")
     for r in rows:
@@ -249,6 +325,10 @@ def main() -> int:
     shutil.copytree(out, publish / "stl")
     shutil.copy2(c.OUT / "3mf" / f"{c.PROJECT_NAME}.3mf", publish)
     shutil.copy2(c.OUT / "parts.json", publish)
+    if args.one_color:
+        shutil.copy2(c.OUT / "3mf" / f"{c.PROJECT_NAME}_1color.3mf", publish)
+        for p in one:
+            print(f"1 色 プレート {p['plate']} {p['name']}: {p['parts']} 個 " + "、".join(f"{k}×{n}" for k, n in p["contents"].items()))
     for p in plates:
         print(f"プレート {p['plate']} {p['name']}: {p['parts']} 個 " + "、".join(f"{k}×{n}" for k, n in p["contents"].items()))
     return 0 if all(r["watertight"] and r["fits_bed"] for r in rows) else 1

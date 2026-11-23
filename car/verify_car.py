@@ -1,7 +1,7 @@
 """車の部品どうしの干渉と、寸法・質量・重心を確かめる。
 
 調べる姿勢: 車軸(=ターンテーブル)の回転 0〜315°(45° 刻み)× うなずき 0〜30°(2° 刻み)。前輪の切れ角はうなずきから決まる。
-使い方: python car/verify_car.py [--model car|car500] [--json out/car/verify.json]
+使い方: python car/verify_car.py [--model car|car500|trike] [--json out/car/verify.json]
 """
 from __future__ import annotations
 
@@ -48,7 +48,12 @@ def _touches(moving: str, fixed: str, shift) -> bool:
 
 
 def fit_checks() -> list[tuple[str, bool]]:
-    """はめ込みの止まり方。組み上がった位置より奥へ押し込めないこと、がたつかないことを確かめる。"""
+    """はめ込みの止まり方。組み上がった位置より奥へ押し込めないこと、がたつかないことを確かめる。
+
+    設計モジュールに FIT_CHECKS [(説明, 動かす部品, 止める部品, ずらす量)] があればそれを使う。
+    """
+    if hasattr(c, "FIT_CHECKS"):
+        return [(label, _touches(moving, fixed, shift)) for label, moving, fixed, shift in c.FIT_CHECKS]
     bumper = "bumper_front500" if any(i.name == "bumper_front500" for i in c.instances()) else "bumper_front"
     checks = [(f"{bumper} を 1 mm 奥へ押すと横棒に当たる(腕の段で止まる)", _touches(bumper, "beam", (0, -1.0, 0)))]
     body = "body500" if bumper == "bumper_front500" else "body_rear"
@@ -79,7 +84,7 @@ def summary() -> dict:
     total = mass + sc + extra
     center = (moment + sc * sc_center) / total
     low_parts = sorted(((float(np.array(c.placed(i).bounding_box())[2]) - c.GROUND_Z, i.name) for i in c.instances()
-                        if i.part not in ("wheel_rear", "wheel_front", "hubcap")))[:3]
+                        if not i.part.startswith(("wheel", "hubcap"))))[:3]
     return dict(
         length=float(hi[1] - lo[1]), width=float(hi[0] - lo[0]), height=float(hi[2] - c.GROUND_Z),
         printed_g=round(mass, 1), total_g=round(total, 1), center_mm=[round(float(v), 1) for v in center],
@@ -96,7 +101,8 @@ def main() -> int:
     args = parser.parse_args()
     s = summary()
     print(f"全長 {s['length']:.1f} 全幅 {s['width']:.1f} 全高 {s['height']:.1f} mm  印刷部品 {s['printed_g']} g  おもり {s['extra_g']} g  合計 {s['total_g']} g")
-    print(f"重心 {s['center_mm']}(地面から {s['center_height_mm']} mm)  後輪にかかる重さの割合 {s['rear_axle_load']:.0%}(前輪 {1 - s['rear_axle_load']:.0%})  地面に近い部品 {s['lowest']}")
+    drive_label, other_label = getattr(c, "AXLE_LABELS", ("後輪", "前輪"))
+    print(f"重心 {s['center_mm']}(地面から {s['center_height_mm']} mm)  {drive_label}にかかる重さの割合 {s['rear_axle_load']:.0%}({other_label} {1 - s['rear_axle_load']:.0%})  地面に近い部品 {s['lowest']}")
     fits = fit_checks()
     print("はめ込み:")
     for label, ok in fits:
