@@ -164,6 +164,13 @@ void update(uint32_t now) {
     }
     switch (stick_link::decidePairRequest(known, windowOpen(now), rssi, stick_link::PAIR_RSSI_MIN)) {
         case stick_link::PairDecision::Ignore:
+            if (windowOpen(now)) {  // 下限(PAIR_RSSI_MIN)を決めるための記録。受け付けている間だけ、2 秒に 1 回
+                static uint32_t lastLogMs = 0;
+                if (car::timedOut(now, lastLogMs, 2000)) {
+                    lastLogMs = now;
+                    Serial.printf("[atom] pair request %04X rssi=%d ignored (too weak)\n", stick_link::shortId(from), rssi);
+                }
+            }
             return;
         case stick_link::PairDecision::Ask:
             if (!hasCandidate) {

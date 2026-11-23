@@ -77,7 +77,7 @@ details .card{margin-top:10px}
     <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="smile">走っている間は笑顔にする</label>
     <button id="pad-forget">ゲームパッドを登録し直す</button>
     <button id="atom-forget">StopWatch を登録し直す</button>
-    <p class="note">押してから 60 秒の間に、すぐそばに置いた StopWatch を、本体の画面で確かめて新しく登録します。BLE のゲームパッドに戻すときは、押したあと本体を再起動します。</p>
+    <p class="note">押してから 60 秒の間に、近く(3 m 以内)に置いた StopWatch を、本体の画面で確かめて新しく登録します。BLE のゲームパッドに戻すときは、押したあと本体を再起動します。</p>
     <button id="forget">Wi-Fi の設定をやり直す</button>
   </div>
 </details>
@@ -163,7 +163,7 @@ $("trim-l").onclick = () => setNeutral(neutral10 + (rev ? 5 : -5));
 $("trim-r").onclick = () => setNeutral(neutral10 + (rev ? -5 : 5));
 $("invert").onchange = () => call("/api/invert?on=" + ($("invert").checked ? 1 : 0)).then(show).catch(lost);
 $("smile").onchange = () => call("/api/smile?on=" + ($("smile").checked ? 1 : 0)).then(show).catch(lost);
-$("atom-forget").onclick = () => call("/api/atom/forget").then((s) => { show(s); $("atom").textContent = "StopWatch: 登録を消しました。60 秒の間に、すぐそばに置いた StopWatch を登録します"; }).catch(lost);
+$("atom-forget").onclick = () => call("/api/atom/forget").then((s) => { show(s); $("atom").textContent = "StopWatch: 登録を消しました。60 秒の間に、近く(3 m 以内)に置いた StopWatch を登録します"; }).catch(lost);
 $("pad-forget").onclick = () => call("/api/pad/forget").then((s) => { show(s); $("pad").textContent = "ゲームパッドの登録を消しました。パッドをペアリング待ちにしてください"; }).catch(lost);
 $("forget").onclick = () => {
   if ($("forget").dataset.armed) { call("/api/forget").catch(() => {}); $("state").textContent = "設定を消しました。本体の画面の QR を読んでください"; }

@@ -47,10 +47,10 @@ int axisFromMillivolts(int mv, int centreMv, int spanMv);
 bool isPressed(int xMv, int vccMv);
 
 /**
- * 組にする申し込みを受け付ける電波の強さの下限 [dBm]。コントローラーをスタックチャンのすぐそばに置いたときだけ組にして、
- * 展示会などで離れた所にある同じファームの機器を登録しないようにする。値は実機で決める(シリアルに rssi が出る)。
+ * 組にする申し込みを受け付ける電波の強さの下限 [dBm]。3 m ほどまで離れたコントローラーだけを組にして(実測: 数 cm で -29〜-43、3 m で -57〜-61)、
+ * 展示会などで離れた所にある同じファームの機器を登録しないようにする。下限より弱い申し込みも、シリアルに rssi が出る。
  */
-constexpr int PAIR_RSSI_MIN = -50;
+constexpr int PAIR_RSSI_MIN = -65;
 
 enum class PairDecision : uint8_t {
     Ignore,  // 返事をしない
