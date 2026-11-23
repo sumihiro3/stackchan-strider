@@ -45,6 +45,20 @@ void test_neutral_clamp() {
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 12.6f, car::clampNeutral(12.6f));
 }
 
+void test_steer_reversed_swaps_left_and_right() {
+    // 後輪でかじを取るトライクは、うなずきと曲がる向きの関係が逆になる
+    const float n = car::NEUTRAL_TRIKE_DEG;
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, car::pitchFromStick(100, n, true));
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, car::PITCH_MAX_DEG, car::pitchFromStick(-100, n, true));
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, n, car::pitchFromStick(0, n, true));
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, car::pitchFromStick(-40, n), car::pitchFromStick(40, n, true));
+}
+
+void test_trike_neutral_is_accepted() {
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 15.0f, car::NEUTRAL_TRIKE_DEG);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, car::NEUTRAL_TRIKE_DEG, car::clampNeutral(car::NEUTRAL_TRIKE_DEG));
+}
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_drive_dead_zone_is_stop);
@@ -53,5 +67,7 @@ int main() {
     RUN_TEST(test_steer_full_right_is_max_and_full_left_is_zero);
     RUN_TEST(test_steer_never_leaves_limits);
     RUN_TEST(test_neutral_clamp);
+    RUN_TEST(test_steer_reversed_swaps_left_and_right);
+    RUN_TEST(test_trike_neutral_is_accepted);
     return UNITY_END();
 }

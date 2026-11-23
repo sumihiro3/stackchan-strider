@@ -13,6 +13,8 @@ constexpr float NEUTRAL_MIN_DEG = 5.0f;  // 直進の角度として受け付け
 constexpr float NEUTRAL_MAX_DEG = 25.0f;
 constexpr float NEUTRAL_CAR500_DEG = 12.6f;
 constexpr float NEUTRAL_RETRO_DEG = 13.0f;
+// トライク(後輪でかじを取る)。レバーの腕が、うなずき 15° で後輪がまっすぐになる向きに付いている(car/trike_design.py)
+constexpr float NEUTRAL_TRIKE_DEG = 15.0f;
 
 /**
  * 前後のスティックの値を、首の回転の速さに直す。
@@ -25,9 +27,10 @@ int driveFromStick(int y);
  * 左右のスティックの値を、うなずきの角度に直す。中心で直進の角度、右いっぱいで PITCH_MAX_DEG、左いっぱいで 0。
  * @param x -100(左)〜100(右)
  * @param neutral 直進の角度 [°]
+ * @param reversed true なら左右を入れ替える(右いっぱいで 0)。後輪でかじを取るトライク用
  * @return 0〜PITCH_MAX_DEG [°]
  */
-float pitchFromStick(int x, float neutral);
+float pitchFromStick(int x, float neutral, bool reversed = false);
 
 /** 直進の角度を、受け付ける範囲に収める。 */
 float clampNeutral(float neutral);

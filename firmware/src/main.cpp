@@ -50,6 +50,7 @@ m5avatar::Avatar avatar;
 Mode mode = Mode::Setup;
 String setupSsid;  // 設定用 Wi-Fi の名前
 bool invertDirection = false;
+bool steerReversed = false;  // 後輪でかじを取る車(トライク)では、スティックの左右とうなずきの向きを逆にする
 bool smileWhileWalking = false;  // 走っている間は笑顔にするか(設定で切り替える。初期状態は変えない)
 
 // 操作。最後に動かしたほう(スマホかパッド)の値を使う
@@ -106,7 +107,7 @@ void setControl(int x, int y, Source source) {
     stickY = constrain(y, -100, 100);
     activeSource = (stickX == 0 && stickY == 0) ? Source::None : source;
     driveSigned = car::driveFromStick(stickY);
-    pitchTarget = car::pitchFromStick(stickX, neutralDeg);
+    pitchTarget = car::pitchFromStick(stickX, neutralDeg, steerReversed);
     applyDrive();
     updatePitch(millis());
     applyExpression();
@@ -122,7 +123,7 @@ bool padIsSteering() {
 void setNeutral(float degrees) {
     neutralDeg = car::clampNeutral(degrees);
     prefs.putInt("neutral", static_cast<int>(std::lround(neutralDeg * 10)));
-    pitchTarget = car::pitchFromStick(stickX, neutralDeg);
+    pitchTarget = car::pitchFromStick(stickX, neutralDeg, steerReversed);
     updatePitch(millis(), true);
 }
 
@@ -258,9 +259,9 @@ void sendJsonState() {
     padName[n] = '\0';
     char json[256];
     snprintf(json, sizeof(json),
-             "{\"drive\":%d,\"pitch\":%.1f,\"neutral\":%.1f,\"invert\":%d,\"smile\":%d,\"volt\":%.2f,\"pad\":%d,"
+             "{\"drive\":%d,\"pitch\":%.1f,\"neutral\":%.1f,\"rev\":%d,\"invert\":%d,\"smile\":%d,\"volt\":%.2f,\"pad\":%d,"
              "\"padName\":\"%s\",\"padBusy\":%d}",
-             driveSigned, pitchTarget, neutralDeg, invertDirection ? 1 : 0, smileWhileWalking ? 1 : 0,
+             driveSigned, pitchTarget, neutralDeg, steerReversed ? 1 : 0, invertDirection ? 1 : 0, smileWhileWalking ? 1 : 0,
              M5StackChan.getBatteryVoltage(), static_cast<int>(padState), padName, padIsSteering() ? 1 : 0);
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", json);
@@ -289,7 +290,12 @@ void handleStop() {
     sendJsonState();
 }
 
+// 車の種類のボタンは rev も送る。微調整のボタンは送らないので、今の向きのままにする
 void handleNeutral() {
+    if (server.hasArg("rev")) {
+        steerReversed = server.arg("rev").toInt() != 0;
+        prefs.putBool("rev", steerReversed);
+    }
     setNeutral(server.arg("deg10").toInt() / 10.0f);
     sendJsonState();
 }
@@ -431,6 +437,7 @@ void setup() {
     prefs.begin("strider", false);
     invertDirection = prefs.getBool("invert", false);
     smileWhileWalking = prefs.getBool("smile", false);
+    steerReversed = prefs.getBool("rev", false);
     neutralDeg = car::clampNeutral(prefs.getInt("neutral", static_cast<int>(std::lround(car::NEUTRAL_CAR500_DEG * 10))) / 10.0f);
     pitchTarget = neutralDeg;
     updatePitch(millis(), true);  // 起動したら、前輪をまっすぐにする

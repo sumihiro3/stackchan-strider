@@ -20,8 +20,11 @@ int driveFromStick(int y) {
     return y < 0 ? -speed : speed;
 }
 
-float pitchFromStick(int x, float neutral) {
+float pitchFromStick(int x, float neutral, bool reversed) {
     x = clampStick(x);
+    if (reversed) {
+        x = -x;
+    }
     neutral = clampFloat(neutral, 0.0f, PITCH_MAX_DEG);
     const int magnitude = x < 0 ? -x : x;
     if (magnitude <= DEAD_ZONE) {
