@@ -20,7 +20,7 @@ import design as d
 
 TRAVEL = 24.0  # 差し込みを調べる距離 [mm]
 STEPS = 49
-BODY_PARTS = ("side_plate_R", "side_plate_L", "deck", "yoke", "gear_table", "socket_frame", "pinion", "shaft", "sleeve", "crank_R", "crank_L")
+BODY_PARTS = ("side_plate_R", "side_plate_L", "deck", "yoke", "cowl_F", "cowl_R", "gear_table", "socket_frame", "pinion", "shaft", "sleeve", "crank_R", "crank_L") + (("spur_R", "spur_L", "cover_R", "cover_L") if d.UNDERSLUNG else ())
 
 
 def _shapes(theta: float) -> dict:

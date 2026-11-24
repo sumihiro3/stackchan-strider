@@ -25,119 +25,151 @@
 
 // ---------------------------------------------------------------- 操作ページ(家の Wi-Fi につながっているとき)
 static const char CONTROL_PAGE[] PROGMEM = STRIDER_PAGE_HEAD R"HTML(
-<title>Stackchan Strider</title>
+<title>Stackchan Pivot</title>
 <style>
-/* 長押ししても文字が選択されたり、メニューが出たりしないようにする */
-button,.seg,.step{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+/* 長押ししても文字が選択されたり、メニューが出たり、画面がスクロールしたりしないようにする */
+button,.joy,.step{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 main{min-height:calc(100dvh - 52px)}
 .grow{flex:1}
-.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.seg button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:var(--bg);outline:0}
+.joy{position:relative;width:min(84vw,20rem);aspect-ratio:1;margin:0 auto;border-radius:50%;background:var(--card);border:2px solid var(--line);touch-action:none}
+.joy::before,.joy::after{content:"";position:absolute;background:var(--line)}
+.joy::before{left:50%;top:8%;bottom:8%;width:2px;margin-left:-1px}
+.joy::after{top:50%;left:8%;right:8%;height:2px;margin-top:-1px}
+.joy span{position:absolute;font-size:13px;color:var(--soft)}
+.knob{position:absolute;left:50%;top:50%;width:34%;aspect-ratio:1;margin:-17% 0 0 -17%;border-radius:50%;background:var(--red);box-shadow:0 4px 12px rgba(0,0,0,.25);z-index:1;pointer-events:none}
+.joy.held .knob{filter:brightness(1.1)}
+.joy.busy{opacity:.45}
 .step{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
 .step output{min-width:4.5em;text-align:center;font-variant-numeric:tabular-nums;font-weight:700}
-.pad{display:flex;flex-direction:column;gap:10px}
-.pad button{min-height:104px;font-size:24px;touch-action:none}
-.pad button.held{transform:scale(.98);filter:brightness(.88)}
-.pad button[aria-pressed=true]{outline:0}
 details summary{color:var(--soft);font-size:14px}
 details .card{margin-top:10px}
 </style></head><body><main>
-<h1>STACKCHAN <b>STRIDER</b></h1>
+<h1>STACKCHAN <b>PIVOT</b></h1>
 <p class="note state" id="state">接続を確認しています…</p>
-<div class="card">
-  <h2>顔の上下</h2>
-  <div class="step"><button id="down">下へ</button><output id="pitch-out"></output><button id="up">上へ</button></div>
-  <h2>速さ</h2>
-  <div class="seg" id="speeds">
-    <button data-speed="20" aria-pressed="false">ゆっくり</button>
-    <button data-speed="35" aria-pressed="true">ふつう</button>
-    <button data-speed="55" aria-pressed="false">はやい</button>
-  </div>
-</div>
+<p class="note state" id="atom"></p>
 <div class="grow"></div>
-<div class="pad">
-  <button class="go" id="fwd">前進</button>
-  <button id="back">後退</button>
+<div class="joy" id="joy">
+  <span style="top:2%;left:50%;transform:translateX(-50%)">前進</span>
+  <span style="bottom:2%;left:50%;transform:translateX(-50%)">後退</span>
+  <span style="left:3%;top:50%;transform:translateY(-50%)">左</span>
+  <span style="right:3%;top:50%;transform:translateY(-50%)">右</span>
+  <div class="knob" id="knob"></div>
 </div>
-<p class="note">ボタンを押している間だけ歩きます。離すと止まります。</p>
+<p class="note" style="text-align:center">指でつまみを動かします。上下で進む・下がる(倒すほど速い)。左右に大きく倒すと、頭を上げてその場で回ります。離すと止まります。</p>
+<div class="grow"></div>
 <details>
   <summary>設定</summary>
   <div class="card">
+    <h2>回るときに頭を上げる角度</h2>
+    <div class="step"><button id="spin-d">← 浅く</button><output id="spin-out"></output><button id="spin-u">深く →</button></div>
+    <p class="note">角度が大きいほど足が深く下り、右の駆動輪が高く浮きます。回りが悪いときは、1° ずつ変えていちばん回る所を探します(足が地面に届くのは約 12°)。本体に保存されます。</p>
+    <h2>速さの上限</h2>
+    <div class="step"><button id="vmax-d">← 遅く</button><output id="vmax-out"></output><button id="vmax-u">速く →</button></div>
+    <p class="note">つまみをいっぱいに倒したときの速さです(30〜100%)。旋回が遅いときは上げます。本体に保存されます。</p>
     <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="invert">前進と後退を入れ替える</label>
-    <p class="note">「前進」で後ろへ歩く場合にチェックします。本体に保存されます。</p>
-    <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="smile">歩いている間は笑顔にする</label>
+    <p class="note">つまみを上へ動かして後ろへ進む場合にチェックします。</p>
+    <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="rev">回る向きを入れ替える</label>
+    <p class="note">つまみを右へ倒して左へ回る場合にチェックします。本体に保存されます。</p>
+    <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="smile">走っている間は笑顔にする</label>
+    <button id="atom-forget">StopWatch を登録し直す</button>
+    <p class="note">押してから 60 秒の間に、近く(3 m 以内)に置いた StopWatch を、本体の画面で確かめて新しく登録します。</p>
     <button id="forget">Wi-Fi の設定をやり直す</button>
   </div>
 </details>
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
-let speed = 35, pitch = 10, held = 0, timer = null;
 const call = (path) => fetch(path, { cache: "no-store" }).then((r) => r.json());
+const ATOM_STATES = ["登録していません", "探しています", "つながっています"];
+let spin10 = 300, vmax = 60, held = false, x = 0, y = 0, timer = null, busy = false, press = "", waiting = false;
 function show(s) {
   $("invert").checked = !!s.invert;
   $("smile").checked = !!s.smile;
-  $("state").textContent = (s.dir ? (s.dir > 0 ? "前進中" : "後退中") : "停止中") + " / 電池 " + s.volt.toFixed(2) + " V";
+  $("rev").checked = !!s.rev;
+  spin10 = Math.round(s.spin * 10);
+  vmax = s.vmax;
+  $("spin-out").textContent = s.spin.toFixed(0) + "°";
+  $("vmax-out").textContent = s.vmax + "%";
+  const moving = s.drive ? (s.drive > 0 ? "前進中" : "後退中") : "停止中";
+  $("state").textContent = moving + " / 頭 " + s.pitch.toFixed(1) + "° / 電池 " + s.volt.toFixed(2) + " V";
+  $("atom").textContent = "StopWatch: " + (ATOM_STATES[s.atom] || "-");
+  busy = !!s.atomBusy;
+  $("joy").classList.toggle("busy", busy);
 }
 function lost() { $("state").textContent = "本体と通信できません。Wi-Fi を確認してください"; }
-// 押している間は 0.3 秒ごとに合図を送る。途切れると本体が自動で止まる
-function start(dir, button) {
-  held = dir;
-  button.classList.add("held");
-  call("/api/drive?dir=" + dir + "&speed=" + speed).then(show).catch(lost);
+
+// つまみの位置 → -100〜100(右と前が正)。円の外へは出さない
+function move(event) {
+  const r = $("joy").getBoundingClientRect();
+  const radius = r.width / 2 * 0.66;
+  let dx = event.clientX - (r.left + r.width / 2), dy = event.clientY - (r.top + r.height / 2);
+  const len = Math.hypot(dx, dy);
+  if (len > radius) { dx *= radius / len; dy *= radius / len; }
+  $("knob").style.transform = "translate(" + dx + "px," + dy + "px)";
+  x = Math.round(dx / radius * 100);
+  y = Math.round(-dy / radius * 100);
+}
+// 前の値の返事を待っている間は送らない(本体が遅いときに、値が溜まって遅れて届かないように)
+function send() {
+  if (waiting) return;
+  waiting = true;
+  call("/api/joy?x=" + x + "&y=" + y + "&s=" + press).then(show).catch(lost).finally(() => { waiting = false; });
+}
+// 触れている間は 0.1 秒ごとに送る。途切れると本体が自動で止まる
+function start(event) {
+  event.preventDefault();
+  $("joy").setPointerCapture(event.pointerId);
+  held = true;
+  press = Math.random().toString(36).slice(2, 10);  // ひと押しごとの番号。離したあとに遅れて届いた値を、本体が捨てられるように
+  waiting = false;
+  $("joy").classList.add("held");
+  move(event);
+  send();
   clearInterval(timer);
-  timer = setInterval(() => { if (held) call("/api/ping").then(show).catch(lost); }, 300);
+  timer = setInterval(send, 100);
 }
 function stop() {
   if (!held) return;
-  held = 0;
+  held = false;
+  x = y = 0;
   clearInterval(timer);
-  document.querySelectorAll(".pad button").forEach((b) => b.classList.remove("held"));
-  call("/api/stop").then(show).catch(lost);
+  $("joy").classList.remove("held");
+  $("knob").style.transform = "";
+  call("/api/stop?s=" + press).then(show).catch(lost);
 }
-[["fwd", 1], ["back", -1]].forEach(([id, dir]) => {
-  const button = $(id);
-  button.addEventListener("pointerdown", (event) => { event.preventDefault(); button.setPointerCapture(event.pointerId); start(dir, button); });
-  ["pointerup", "pointercancel", "lostpointercapture"].forEach((name) => button.addEventListener(name, stop));
-  button.addEventListener("contextmenu", (event) => event.preventDefault());
-});
+$("joy").addEventListener("pointerdown", start);
+$("joy").addEventListener("pointermove", (event) => { if (held) move(event); });
+["pointerup", "pointercancel", "lostpointercapture"].forEach((name) => $("joy").addEventListener(name, stop));
+$("joy").addEventListener("contextmenu", (event) => event.preventDefault());
 // 画面を切り替えた、ほかのアプリへ移った、などのときも止める
 document.addEventListener("visibilitychange", () => { if (document.hidden) stop(); });
 window.addEventListener("blur", stop);
 window.addEventListener("pagehide", stop);
-document.addEventListener("selectstart", (event) => { if (event.target.closest("button,.seg,.step")) event.preventDefault(); });
+document.addEventListener("selectstart", (event) => { if (event.target.closest("button,.joy,.step")) event.preventDefault(); });
 
-$("speeds").addEventListener("click", (event) => {
-  const button = event.target.closest("button[data-speed]");
-  if (!button) return;
-  speed = Number(button.dataset.speed);
-  document.querySelectorAll("#speeds button").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
-  if (held) call("/api/drive?dir=" + held + "&speed=" + speed).then(show).catch(lost);
-});
-function look(delta) {
-  pitch = Math.min(60, Math.max(0, pitch + delta));
-  $("pitch-out").textContent = pitch + "°";
-  $("down").disabled = pitch <= 0;
-  $("up").disabled = pitch >= 60;
-  if (delta) call("/api/look?pitch=" + pitch).catch(lost);
-}
-$("down").onclick = () => look(-10);
-$("up").onclick = () => look(10);
+const tune = (query) => call("/api/tune?" + query).then(show).catch(lost);
+$("spin-d").onclick = () => tune("spin10=" + (spin10 - 10));
+$("spin-u").onclick = () => tune("spin10=" + (spin10 + 10));
+$("vmax-d").onclick = () => tune("vmax=" + (vmax - 10));
+$("vmax-u").onclick = () => tune("vmax=" + (vmax + 10));
+$("rev").onchange = () => tune("rev=" + ($("rev").checked ? 1 : 0));
 $("invert").onchange = () => call("/api/invert?on=" + ($("invert").checked ? 1 : 0)).then(show).catch(lost);
 $("smile").onchange = () => call("/api/smile?on=" + ($("smile").checked ? 1 : 0)).then(show).catch(lost);
+$("atom-forget").onclick = () => call("/api/atom/forget").then((s) => { show(s); $("atom").textContent = "StopWatch: 登録を消しました。60 秒の間に、近く(3 m 以内)に置いた StopWatch を登録します"; }).catch(lost);
 $("forget").onclick = () => {
   if ($("forget").dataset.armed) { call("/api/forget").catch(() => {}); $("state").textContent = "設定を消しました。本体の画面の QR を読んでください"; }
   else { $("forget").dataset.armed = "1"; $("forget").textContent = "もう一度押すと Wi-Fi の設定を消します"; }
 };
-look(0);
+// 操作していない間も、ときどき状態を読み直す(StopWatch の接続の表示のため)
+setInterval(() => { if (!held && !document.hidden) call("/api/state").then(show).catch(lost); }, 2000);
 call("/api/state").then(show).catch(lost);
 </script></body></html>
 )HTML";
 
 // ---------------------------------------------------------------- 設定ページ(はじめて起動したとき / Wi-Fi につながらないとき)
 static const char SETUP_PAGE[] PROGMEM = STRIDER_PAGE_HEAD R"HTML(
-<title>Stackchan Strider の設定</title></head><body><main>
-<h1>STACKCHAN <b>STRIDER</b></h1>
+<title>Stackchan Pivot の設定</title></head><body><main>
+<h1>STACKCHAN <b>PIVOT</b></h1>
 <form class="card" id="form">
   <h2>家の Wi-Fi につなぐ</h2>
   <label>Wi-Fi の名前

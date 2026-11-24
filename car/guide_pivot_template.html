@@ -1,0 +1,585 @@
+<title>Stackchan Pivot 組立ガイド</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* レイアウト: 3D の作業台を画面に固定し、その横(狭い画面では下)を説明カードが流れる。スクロール位置がそのまま組立の進み具合になる。
+   walker/guide_template.html の見た目を車用に写したもの。 */
+:root {
+  --bench: #e9ecef;        /* 作業台(ページ地) */
+  --card: #f8f9fa;         /* 説明カード */
+  --ink: #1d232c;
+  --ink-soft: #5b6573;
+  --line: #cfd5dc;
+  --signal: #c8372d;       /* 足の腕・押し板・レバーの赤(強調) */
+  --signal-ink: #ffffff;
+  --note: #fdecea;         /* 注意書きの地 */
+  --note-ink: #7a1d16;
+  --stage-top: #f4f6f8;
+  --stage-bottom: #dfe4e9;
+  --role-gray: #9a9a96;
+  --role-red: #c8372d;
+  --role-black: #26262a;
+  --font-display: "Chakra Petch", "Noto Sans JP", system-ui, sans-serif;
+  --font-body: "Noto Sans JP", system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bench: #12151a; --card: #1b2027; --ink: #e6e9ee; --ink-soft: #98a2b1; --line: #2e3540;
+    --signal: #ff7a6e; --signal-ink: #1f0504; --note: #33181a; --note-ink: #ffc9c4;
+    --stage-top: #1d222a; --stage-bottom: #12151a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bench: #12151a; --card: #1b2027; --ink: #e6e9ee; --ink-soft: #98a2b1; --line: #2e3540;
+  --signal: #ff7a6e; --signal-ink: #1f0504; --note: #33181a; --note-ink: #ffc9c4;
+  --stage-top: #1d222a; --stage-bottom: #12151a; color-scheme: dark;
+}
+[hidden] { display: none !important; }
+body {
+  background: var(--bench); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.75;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.guide { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.7fr); gap: 0 28px; max-width: 1500px; margin-inline: auto; }
+.stage { position: sticky; top: env(safe-area-inset-top, 0px); height: 100vh; height: 100dvh; min-width: 0; padding-block: 12px; box-sizing: border-box; }
+.stage-frame { position: relative; height: 100%; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: linear-gradient(var(--stage-top), var(--stage-bottom)); }
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: pan-y; cursor: grab; }
+.stage canvas:active { cursor: grabbing; }
+.progress { position: absolute; left: 0; right: 0; top: 0; height: 3px; background: transparent; }
+.progress i { display: block; height: 100%; width: 0; background: var(--signal); }
+.now { position: absolute; left: 14px; top: 12px; font: 600 12px var(--font-display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); pointer-events: none; }
+.now b { color: var(--ink); font-weight: 700; }
+.drag-hint { position: absolute; right: 12px; bottom: 10px; font-size: 11px; color: var(--ink-soft); pointer-events: none; }
+.fail { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--note-ink); }
+
+.steps { min-width: 0; }
+.step { min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; padding-block: 24px; box-sizing: border-box; }
+.card { width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 22px 22px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.hero .card { background: none; border: 0; padding-inline: 0; }
+.eyebrow { margin: 0; font: 600 12px var(--font-display); letter-spacing: 0.14em; text-transform: uppercase; color: var(--signal); }
+h1 { margin: 0; font: 700 clamp(34px, 5.2vw, 56px)/1.02 var(--font-display); letter-spacing: 0.02em; text-transform: uppercase; text-wrap: balance; }
+h1 b { color: var(--signal); font-weight: 700; }
+h2 { margin: 0; font: 700 21px/1.4 var(--font-body); text-wrap: balance; }
+p { margin: 0; }
+.lead { font-size: 16px; }
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; margin: 4px 0 0; }
+.facts div { border-top: 1px solid var(--line); padding-top: 8px; }
+.facts dt { font-size: 12px; color: var(--ink-soft); }
+.facts dd { margin: 0; font: 500 19px var(--font-data); font-variant-numeric: tabular-nums; }
+.scroll-cue { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-soft); }
+.scroll-cue::before { content: ""; width: 18px; height: 28px; border: 2px solid var(--ink-soft); border-radius: 10px; background: radial-gradient(circle at 50% 28%, var(--ink-soft) 0 2.5px, transparent 3px); }
+a:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+ol.do { margin: 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: 6px; }
+.parts { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.parts li { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px 2px 7px; border: 1px solid var(--line); border-radius: 999px; font-size: 12.5px; background: var(--bench); }
+.parts li::before { content: ""; width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--line); background: var(--dot, var(--role-gray)); }
+.parts .gray { --dot: var(--role-gray); }
+.parts .red { --dot: var(--role-red); }
+.parts .black { --dot: var(--role-black); }
+.parts .coin { --dot: #b87333; }
+.parts .sc { --dot: #8d9196; }
+.parts b { font: 500 12px var(--font-data); }
+.tip { background: var(--note); color: var(--note-ink); border-radius: 8px; padding: 9px 12px; font-size: 13.5px; }
+.tip strong { font-weight: 700; }
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-weight: 500; color: var(--ink-soft); padding: 4px 8px 4px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line); }
+td.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; white-space: nowrap; }
+pre { margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bench); font: 13px/1.6 var(--font-data); overflow-x: auto; }
+.small { font-size: 12.5px; color: var(--ink-soft); }
+a { color: var(--signal); }
+@media (max-width: 860px) {
+  .guide { grid-template-columns: minmax(0, 1fr); }
+  .stage { height: 46vh; height: 46svh; z-index: 2; background: var(--bench); padding-block: 8px; }
+  .step { min-height: 62vh; min-height: 62svh; align-items: flex-start; padding-block: 14px; }
+  .hero { min-height: 50vh; min-height: 50svh; }
+  .drag-hint { display: none; }
+}
+</style>
+
+<div class="guide">
+  <div class="stage" aria-label="組立の 3D アニメーション">
+    <div class="stage-frame">
+      <canvas id="view"></canvas>
+      <div class="progress"><i id="bar"></i></div>
+      <div class="now" id="now"></div>
+      <div class="drag-hint">横にドラッグで回転</div>
+      <div class="fail" id="fail" hidden>3D 表示を開始できませんでした。WebGL が使えるブラウザで開いてください。手順の文章はそのまま読めます。</div>
+    </div>
+  </div>
+
+  <main class="steps">
+    <section class="step hero" id="top" data-label="完成">
+      <div class="card">
+        <p class="eyebrow">組立ガイド・ピボット</p>
+        <h1>Stackchan <b>Pivot</b></h1>
+        <p class="lead">2 つの駆動輪でまっすぐ走り、頭を上げるとその場で回る、3D プリントの車です。スタックチャンが首を振ると駆動輪が回ります。頭を上げると、頭の横のレバーが赤い押し板を押し下げ、足が地面に着いて右の駆動輪が浮きます。左の駆動輪だけが地面を押すので、足を軸に回ります。ネジも接着剤も使わず、はめるだけで組み立てます。</p>
+        <dl class="facts">
+          <div><dt>印刷部品</dt><dd id="fact-parts">— 個</dd></div>
+          <div><dt>工具・ネジ</dt><dd>不要</dd></div>
+          <div><dt>全長 × 全幅</dt><dd>99 × 139 mm</dd></div>
+          <div><dt>ほかに要るもの</dt><dd>LEGO Technic のピン 2 本</dd></div>
+        </dl>
+        <p class="scroll-cue">下へスクロールすると、組み立てが始まります</p>
+      </div>
+    </section>
+
+    <section class="step" id="step-parts" data-label="部品">
+      <div class="card">
+        <p class="eyebrow">準備</p>
+        <h2>部品を印刷する(サポートなし)</h2>
+        <p>印刷データは <code>print_pivot/stackchan_pivot.3mf</code>(Bambu Lab P2S 用、色ごとのプレート)です。フィラメントは 1 = グレー、2 = 赤、3 = 黒。どの部品もサポートは要りません。</p>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>プレート</th><th>中身</th></tr></thead>
+            <tbody>
+              <tr><td>Gray</td><td>左右の側板、デッキ、ターンテーブル歯車、ソケット枠、ピニオン、スリーブ、ヨーク、C クリップ ×5</td></tr>
+              <tr><td>Red</td><td>足の腕、押し板、頭のレバー</td></tr>
+              <tr><td>Black</td><td>右の駆動輪(シャフトと一体)、左の駆動輪(六角穴)、補助輪 ×2</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>ほかに、LEGO Technic のピン(摩擦つき、2 ポッチの長さ)を 2 本用意します。</p>
+        <p class="tip"><strong>1 色で刷るなら</strong> <code>print_pivot/stackchan_pivot_1color.3mf</code> を使います。1 枚目がピボットだけの部品(左右の側板、足の腕、押し板、頭のレバー、C クリップ)、2 枚目が駆動部などの部品です。</p>
+      </div>
+    </section>
+
+    <section class="step" id="step-1" data-label="手順 1">
+      <div class="card">
+        <p class="eyebrow">手順 1 / 10</p>
+        <h2>右の側板に、足の腕を付ける</h2>
+        <ol class="do">
+          <li>右の側板は、補助輪のピンが<strong>前の外側</strong>に立っているほうです。車軸の大きい穴の前の下に、外へ短い筒が出た小さい丸い穴があります。</li>
+          <li>足の腕の軸を、その穴に<strong>内側から</strong>通します。</li>
+          <li>外へ出た軸の先の溝に、C クリップをはめます。</li>
+        </ol>
+        <ul class="parts"><li class="gray">右の側板 <b>×1</b></li><li class="red">足の腕 <b>×1</b></li><li class="gray">C クリップ <b>×1</b></li></ul>
+        <p class="tip"><strong>この手順は必ず最初です。</strong>側板を車体に付けたあとでは、足の腕はピニオンに当たって入りません。</p>
+        <p class="tip">足の腕の向き: 腕は後ろへ伸び、丸い足が下、ピンの付いた端が後ろに来ます。ピンは外を向きます。軸で自由に回れば合っています。</p>
+      </div>
+    </section>
+
+    <section class="step" id="step-2" data-label="手順 2">
+      <div class="card">
+        <p class="eyebrow">手順 2 / 10</p>
+        <h2>デッキにターンテーブル歯車とソケット枠を載せる</h2>
+        <ol class="do">
+          <li>デッキを机に置きます。<strong>まだ側板には付けません。</strong></li>
+          <li>歯車の歯を下に向け、中央の軸をデッキの丸いボスに落とし込みます。</li>
+          <li>ソケット枠の 3 つのツメを、歯車の円板の角穴に合わせて載せます。</li>
+        </ol>
+        <ul class="parts"><li class="gray">デッキ <b>×1</b></li><li class="gray">ターンテーブル歯車 <b>×1</b></li><li class="gray">ソケット枠 <b>×1</b></li></ul>
+      </div>
+    </section>
+
+    <section class="step" id="step-3" data-label="手順 3">
+      <div class="card">
+        <p class="eyebrow">手順 3 / 10</p>
+        <h2>ヨークをかぶせる(まだ留めない)</h2>
+        <p>ヨークを上からかぶせます。輪の内側の返しが、歯車の浮き上がりを押さえます。左右のツメは、次の手順で側板に留めます。それまでは手で押さえておきます。</p>
+        <ul class="parts"><li class="gray">ヨーク <b>×1</b></li></ul>
+        <p class="tip">左右に立っている丸い板(耳)が、あとでスタックチャンの頭を挟みます。右の耳には、手順 9 でレバーの輪を掛けます。</p>
+      </div>
+    </section>
+
+    <section class="step" id="step-4" data-label="手順 4">
+      <div class="card">
+        <p class="eyebrow">手順 4 / 10</p>
+        <h2>ピニオンを入れ、左の側板でまとめて留める</h2>
+        <ol class="do">
+          <li>ピニオンを、デッキの<strong>下から</strong>入れます。歯が歯車の歯にかみ合い、長い筒が左へ向きます。</li>
+          <li>左の側板の<strong>下の</strong>丸い穴を、ピニオンの筒に通します。</li>
+          <li>デッキの 2 本とヨークの 2 本、左側の 4 本のツメを、側板の角穴に「カチッ」と止まるまで<strong>一緒に</strong>押し込みます。</li>
+        </ol>
+        <ul class="parts"><li class="gray">ピニオン <b>×1</b></li><li class="gray">左の側板 <b>×1</b></li></ul>
+        <p class="tip"><strong>デッキだけを先に側板へ留めると、ヨークを付けられません。</strong>ヨークのツメが側板の角穴に入らなくなります。デッキとヨークは、左の側板にまとめて留めます。</p>
+        <p class="tip">左の側板は、補助輪のピンが<strong>後ろの外側</strong>に立っているほうです。ピニオンは歯車とかみ合うので、横からは入りません。</p>
+      </div>
+    </section>
+
+    <section class="step" id="step-5" data-label="手順 5">
+      <div class="card">
+        <p class="eyebrow">手順 5 / 10</p>
+        <h2>右の側板を、足の腕ごと付ける</h2>
+        <ol class="do">
+          <li>スリーブを、右の側板の大きい丸い穴に<strong>内側から</strong>通します。</li>
+          <li>足の腕とスリーブを付けた右の側板を、右からまっすぐ寄せます。</li>
+          <li>デッキとヨークの右側のツメを、側板の角穴に「カチッ」と止まるまで押し込みます。</li>
+        </ol>
+        <ul class="parts"><li class="gray">スリーブ <b>×1</b></li><li class="gray">右の側板(足の腕つき) <b>×1</b></li></ul>
+        <p class="tip">足の腕は、車体の下の右寄りに収まります。寄せる途中で、ほかの部品には当たりません。</p>
+      </div>
+    </section>
+
+    <section class="step" id="step-6" data-label="手順 6">
+      <div class="card">
+        <p class="eyebrow">手順 6 / 10</p>
+        <h2>駆動輪を付ける</h2>
+        <ol class="do">
+          <li>シャフトと一体の右の駆動輪を、右から差し込みます。六角のシャフトがスリーブとピニオンを通り、左の側板から出ます。</li>
+          <li>左の駆動輪(六角穴)を、シャフトの左端に押し込みます。</li>
+        </ol>
+        <ul class="parts"><li class="black">右の駆動輪(シャフト一体) <b>×1</b></li><li class="black">左の駆動輪(六角穴) <b>×1</b></li></ul>
+        <p class="tip"><strong>左右の駆動輪は 1 本の軸でつながり、同じ速さで回ります。</strong>このためまっすぐ進みます。曲がるときは、足で右の駆動輪を浮かせ、左だけで地面を押します。</p>
+        <p class="tip">足の腕の軸の先と C クリップは、右の駆動輪の内側に隠れます。左の駆動輪が抜けやすいときは、車輪の外に出たピンの溝に C クリップを足せます(1 個多く刷ります)。</p>
+      </div>
+    </section>
+
+    <section class="step" id="step-7" data-label="手順 7">
+      <div class="card">
+        <p class="eyebrow">手順 7 / 10</p>
+        <h2>補助輪を付ける(右前と左後ろ)</h2>
+        <ol class="do">
+          <li>補助輪を、右の側板の前のピンと、左の側板の後ろのピンに通します。</li>
+          <li>ピンの先の溝に C クリップをはめます。</li>
+        </ol>
+        <ul class="parts"><li class="black">補助輪 <b>×2</b></li><li class="gray">C クリップ <b>×2</b></li></ul>
+        <p class="tip">補助輪は、駆動輪より 1 mm 高い位置に付きます。重心が車軸の少し前にあるので、ふだんは右前の補助輪が地面に着き、車体をわずかに前へ傾けて支えます。左後ろの補助輪は、後ろへ傾いたときに着きます。旋回のあいだは、足、左の駆動輪、右前の補助輪の 3 点で立ちます。</p>
+      </div>
+    </section>
+
+    <section class="step" id="step-8" data-label="手順 8">
+      <div class="card">
+        <p class="eyebrow">手順 8 / 10</p>
+        <h2>スタックチャンを載せる</h2>
+        <ol class="do">
+          <li><strong>先にファームウェアを書き込みます</strong>(<code>firmware/README.md</code>)。うなずきは 0〜30° に制限され、それ以上は動きません。</li>
+          <li>上の開口から真上に下ろし、土台をソケット枠にはめます。頭はヨークの左右の耳の間に入ります。</li>
+        </ol>
+        <ul class="parts"><li class="gray">スタックチャン <b>×1</b></li></ul>
+        <p class="tip"><strong>レバーはまだ付けません。</strong>レバーを付けたまま載せると、輪がヨークの耳に乗り上げて、土台がはまりません。</p>
+      </div>
+    </section>
+
+    <section class="step" id="step-9" data-label="手順 9">
+      <div class="card">
+        <p class="eyebrow">手順 9 / 10</p>
+        <h2>頭の右側に、レバーを横から付ける</h2>
+        <ol class="do">
+          <li>レバーは馬てい形の輪です。輪の開いた側を下に、ピンの出た腕を後ろに向けます。</li>
+          <li>ヨークの右の耳を外から囲むように、<strong>横から</strong>頭に当てます。</li>
+          <li>LEGO Technic のピン 2 本を、レバーの 2 つの穴に外から押し込み、頭の右側の穴(3 つのうち前と後ろ)まで差します。</li>
+        </ol>
+        <ul class="parts"><li class="red">頭のレバー <b>×1</b></li><li>LEGO Technic のピン(用意する) <b>×2</b></li></ul>
+        <p class="tip">輪の開きは 22 mm で、耳の円板(直径 26 mm)より狭くなっています。このため、足が地面を押した反動で頭が上へ抜けることはありません。外すときは、先に LEGO のピンを抜いてレバーを横へ外します。</p>
+        <p class="tip">USB-C のケーブルは、レバーの輪の前側をぎりぎり通ります。</p>
+      </div>
+    </section>
+
+    <section class="step" id="step-10" data-label="手順 10">
+      <div class="card">
+        <p class="eyebrow">手順 10 / 10</p>
+        <h2>電源を入れ、押し板をつなぐ</h2>
+        <ol class="do">
+          <li>ファームウェアを書き込んだスタックチャンの電源を入れます。頭が水平(0°)で止まります。</li>
+          <li>押し板は、両端に丸い穴のあいた「く」の字の板です。上の穴をレバーのピンに、下の穴を足の腕の後ろの端のピンに、外から同時に差します。</li>
+          <li>2 本のピンの先の溝に、C クリップをはめます。</li>
+        </ol>
+        <ul class="parts"><li class="red">押し板 <b>×1</b></li><li class="gray">C クリップ <b>×2</b></li></ul>
+        <p class="tip">押し板は、頭が水平で止まったのを見てからつなぎます。ほかのファームウェアのままつなぐと、その角度で頭が上がり、足が下りてしまいます。</p>
+        <p class="tip">これで、頭を上げると足が下ります。足は、うなずき約 12° で地面に着きます。30° まで上げると、右の駆動輪が約 2 mm 浮きます。</p>
+      </div>
+    </section>
+
+    <section class="step" id="step-drive" data-label="走る">
+      <div class="card">
+        <p class="eyebrow">完成</p>
+        <h2>StopWatch かスマホで走らせる</h2>
+        <p>首振り(ヨー)のサーボを回し続けると、ターンテーブルと歯車を通して駆動輪が回ります。頭が水平のあいだはまっすぐ進み、頭を上げると足を軸にその場で回ります。</p>
+        <ol class="do">
+          <li><strong>StopWatch:</strong> M5Stack StopWatch に専用のファームを書き込み、両方の電源を入れると組になります。画面を指でなぞると進み、指を離すと止まります(<code>firmware/README.md</code> の「StopWatch コントローラー」)。</li>
+          <li><strong>スマホ:</strong> 画面に出る QR を読んで家の Wi-Fi を設定し、次に出る QR で操作ページを開きます。丸いジョイスティックを上下に倒すと前進・後退、左右に大きく(4 割より多く)倒すと旋回します。</li>
+        </ol>
+        <p class="tip">スティックを右に倒すと、前進しながら右へ回ります。左に倒すと、後退しながら回ります。</p>
+        <p class="tip">回りが悪いときは、操作ページの「設定」で「回るときに頭を上げる角度」(10〜30°)を変えます。遅いときは「速さの上限」(30〜100%)を 10% ずつ上げます。</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script type="application/json" id="guide-data">/*__DATA__*/</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  "use strict";
+  const DATA = JSON.parse(document.getElementById("guide-data").textContent);
+  const F = DATA.frames;
+  const $ = (id) => document.getElementById(id);
+  const bytes = (text) => { const raw = atob(text); const out = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i); return out.buffer; };
+  const f32 = (text) => new Float32Array(bytes(text));
+  const u32 = (text) => new Uint32Array(bytes(text));
+  const clamp = (v) => Math.min(1, Math.max(0, v));
+  const smooth = (v) => { const t = clamp(v); return t * t * (3 - 2 * t); };
+  const easeOut = (v) => 1 - Math.pow(1 - clamp(v), 3);
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  $("fact-parts").textContent = DATA.printed + " 個";
+
+  const sections = Array.from(document.querySelectorAll(".step"));
+  const HERO = 0, PARTS = 1, FIRST = 2, DRIVE = sections.length - 1;
+  // 場面ごとのカメラ: 方位・仰角(天頂から)・距離・注視点。座標は three.js(Y が上、車の前は -Z)
+  const CAMERAS = [
+    { az: 1.95, pol: 1.2, r: 560, at: [0, 70, 0] },
+    { az: 2.2, pol: 1.05, r: 1000, at: [10, 135, 10] },
+    { az: -0.35, pol: 0.8, r: 330, at: [110, 20, 12] },
+    { az: 2.5, pol: 0.9, r: 320, at: [0, 55, 0] },
+    { az: -2.4, pol: 0.95, r: 360, at: [0, 65, 0] },
+    { az: -2.2, pol: 1.3, r: 440, at: [-30, 35, 0] },
+    { az: 2.15, pol: 1.0, r: 460, at: [40, 40, 0] },
+    { az: 2.0, pol: 1.1, r: 520, at: [0, 35, 0] },
+    { az: 2.6, pol: 0.3, r: 480, at: [0, 20, 0] },
+    { az: 2.3, pol: 1.15, r: 600, at: [0, 105, 0] },
+    { az: 1.3, pol: 1.15, r: 400, at: [30, 100, 10] },
+    { az: 0.85, pol: 1.25, r: 430, at: [35, 60, 30] },
+    { az: 0.95, pol: 1.25, r: 600, at: [0, 70, 0] },
+  ];
+
+  // ---------------------------------------------------------------- スクロール位置 → 場面と進み具合
+  const state = { step: 0, p: 0, frame: 0, drive: 1, dragAz: 0, dragPol: 0 };
+  // 確認・撮影用: URL の末尾を #at-場面番号-進み具合(%) にすると、スクロールせずにその場面を表示する(例 #at-10-60)
+  const pinned = /^#at-(\d+)-(\d+)(?:-(\d+))?$/.exec(location.hash);
+  const pinnedFrame = pinned && pinned[3] !== undefined ? Number(pinned[3]) : null;
+  function readScroll() {
+    if (pinned) { state.step = Math.min(sections.length - 1, Number(pinned[1])); state.p = clamp(Number(pinned[2]) / 100); $("now").innerHTML = "<b>" + sections[state.step].dataset.label + "</b>"; return; }
+    const height = window.innerHeight;
+    const narrow = window.matchMedia("(max-width: 860px)").matches;
+    const stageBottom = narrow ? document.querySelector(".stage").getBoundingClientRect().bottom : 0;
+    const focus = narrow ? stageBottom + (height - stageBottom) * 0.42 : height * 0.56;
+    let step = 0, p = 0;
+    sections.forEach((section, index) => {
+      const box = section.getBoundingClientRect();
+      if (box.top <= focus) { step = index; p = clamp((focus - box.top) / Math.max(1, box.height)); }
+    });
+    if (step !== state.step) { state.dragAz = 0; state.dragPol = 0; }
+    state.step = step; state.p = p;
+    $("bar").style.width = (((step + p) / sections.length) * 100).toFixed(1) + "%";
+    $("now").innerHTML = "<b>" + sections[step].dataset.label + "</b>";
+  }
+
+  // ---------------------------------------------------------------- 3D
+  window.addEventListener("scroll", readScroll, { passive: true });
+  window.addEventListener("resize", readScroll);
+  if (location.hash && document.getElementById(location.hash.slice(1))) document.getElementById(location.hash.slice(1)).scrollIntoView();
+  readScroll();
+  if (!window.THREE) { $("fail").hidden = false; return; }
+  const canvas = $("view");
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, preserveDrawingBuffer: true }); } catch (error) { $("fail").hidden = false; return; }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(30, 1, 10, 6000);
+
+  // 撮影用の照明環境(樹脂のハイライトはここの映り込みで出る)
+  (function () {
+    const studio = new THREE.Scene();
+    studio.add(new THREE.Mesh(new THREE.SphereGeometry(60, 32, 16), new THREE.MeshBasicMaterial({ color: 0x3a3e45, side: THREE.BackSide })));
+    const lamp = (x, y, z, w, h, power) => {
+      const panel = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(power, power, power * 0.97), side: THREE.DoubleSide }));
+      panel.position.set(x, y, z); panel.lookAt(0, 0, 0); studio.add(panel);
+    };
+    lamp(6, 44, 8, 44, 44, 2.8); lamp(42, 18, 26, 14, 26, 6.0); lamp(-40, 18, -30, 10, 34, 4.5);
+    const generator = new THREE.PMREMGenerator(renderer);
+    scene.environment = generator.fromScene(studio, 0.035).texture;
+    generator.dispose();
+  })();
+  const sun = new THREE.DirectionalLight(0xffffff, 1.15);
+  sun.position.set(190, 420, 150);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.bias = -0.0004;
+  sun.shadow.radius = 5;
+  Object.assign(sun.shadow.camera, { left: -300, right: 300, top: 300, bottom: -300, near: 50, far: 1000 });
+  scene.add(sun);
+  const rim = new THREE.DirectionalLight(0xffffff, 0.5);
+  rim.position.set(-220, 170, -260);
+  scene.add(rim);
+
+  const world = new THREE.Group();   // 機体座標(Z 上・Y 前)を three.js の Y 上へ
+  world.rotation.x = -Math.PI / 2;
+  scene.add(world);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), new THREE.ShadowMaterial({ opacity: 0.3 }));
+  floor.receiveShadow = true;
+  world.add(floor);
+  const body = new THREE.Group();     // 地面を z = 0 に
+  body.position.z = DATA.ground;
+  world.add(body);
+
+  // 角は立てたまま曲面だけ滑らかにした形状
+  function smoothGeometry(part) {
+    const indexed = new THREE.BufferGeometry();
+    indexed.setAttribute("position", new THREE.BufferAttribute(f32(part.v), 3));
+    indexed.setIndex(new THREE.BufferAttribute(u32(part.i), 1));
+    const flat = indexed.toNonIndexed();
+    const pos = flat.attributes.position.array, faces = pos.length / 9;
+    const normalOf = new Float32Array(faces * 3), areaOf = new Float32Array(faces), keys = new Array(faces * 3), corners = new Map();
+    for (let f = 0; f < faces; f++) {
+      const o = f * 9;
+      const ax = pos[o + 3] - pos[o], ay = pos[o + 4] - pos[o + 1], az = pos[o + 5] - pos[o + 2];
+      const bx = pos[o + 6] - pos[o], by = pos[o + 7] - pos[o + 1], bz = pos[o + 8] - pos[o + 2];
+      const nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx, length = Math.hypot(nx, ny, nz) || 1;
+      areaOf[f] = length; normalOf[f * 3] = nx / length; normalOf[f * 3 + 1] = ny / length; normalOf[f * 3 + 2] = nz / length;
+      for (let c = 0; c < 3; c++) {
+        const q = o + c * 3, key = Math.round(pos[q] * 200) + "_" + Math.round(pos[q + 1] * 200) + "_" + Math.round(pos[q + 2] * 200);
+        keys[f * 3 + c] = key;
+        const list = corners.get(key);
+        if (list) list.push(f); else corners.set(key, [f]);
+      }
+    }
+    const normals = new Float32Array(pos.length);
+    for (let f = 0; f < faces; f++) {
+      const fx = normalOf[f * 3], fy = normalOf[f * 3 + 1], fz = normalOf[f * 3 + 2];
+      for (let c = 0; c < 3; c++) {
+        let nx = 0, ny = 0, nz = 0;
+        const list = corners.get(keys[f * 3 + c]);
+        for (let i = 0; i < list.length; i++) {
+          const g = list[i], gx = normalOf[g * 3], gy = normalOf[g * 3 + 1], gz = normalOf[g * 3 + 2];
+          if (fx * gx + fy * gy + fz * gz > 0.76) { nx += gx * areaOf[g]; ny += gy * areaOf[g]; nz += gz * areaOf[g]; }
+        }
+        const length = Math.hypot(nx, ny, nz) || 1, q = f * 9 + c * 3;
+        normals[q] = nx / length; normals[q + 1] = ny / length; normals[q + 2] = nz / length;
+      }
+    }
+    flat.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
+    return flat;
+  }
+  const geometries = {};
+  Object.keys(DATA.parts).forEach((key) => { geometries[key] = smoothGeometry(DATA.parts[key]); });
+
+  const items = DATA.instances.map((inst) => {
+    const part = DATA.parts[inst.part];
+    const material = new THREE.MeshPhysicalMaterial({ roughness: part.printable ? 0.36 : 0.5, metalness: 0, clearcoat: part.printable ? 0.4 : 0, clearcoatRoughness: 0.24, envMapIntensity: part.printable ? 0.42 : 0.36, side: THREE.DoubleSide });
+    material.color.set(part.color).convertSRGBToLinear();
+    if (inst.part === "sc_face") { material.roughness = 0.05; material.clearcoat = 1; material.clearcoatRoughness = 0.03; material.envMapIntensity = 1.1; }
+    const mesh = new THREE.Mesh(geometries[inst.part], material);
+    mesh.matrixAutoUpdate = false;
+    mesh.castShadow = true;
+    body.add(mesh);
+    return { inst: inst, part: part, mesh: mesh, material: material, base: material.color.clone(), frames: inst.f ? f32(inst.f) : null };
+  });
+
+  // ---------------------------------------------------------------- 1コマの姿勢
+  const scratch = new Float32Array(12), blended = new Float32Array(12);
+  function sample(array, frame, out) {
+    const a = Math.floor(frame) % F, b = (a + 1) % F, t = frame - Math.floor(frame);
+    for (let k = 0; k < 12; k++) out[k] = array[a * 12 + k] * (1 - t) + array[b * 12 + k] * t;
+    return out;
+  }
+  function setMatrix(matrix, m, dx, dy, dz) {
+    matrix.set(m[0], m[1], m[2], m[3] + dx, m[4], m[5], m[6], m[7] + dy, m[8], m[9], m[10], m[11] + dz, 0, 0, 0, 1);
+  }
+  // 組立の場面での部品のずれと見え方。moves の最初の動きで現れ、手順をまたいで最後の位置に残る
+  const offset = [0, 0, 0];
+  function assembled(moves, S, p) {
+    let alpha = 0, glow = 0;
+    offset[0] = offset[1] = offset[2] = 0;
+    const first = moves[0];
+    if (S < first.step) return { alpha: 0, glow: 0 };
+    let current = null;
+    for (let i = 0; i < moves.length; i++) {
+      const m = moves[i];
+      if (m.step < S || (m.step === S && p >= m.start)) current = { move: m, t: m.step < S ? 1 : clamp((p - m.start) / m.span) };
+    }
+    if (!current) {  // 最初の動きの前(この手順の中で、まだ出番が来ていない)
+      if (first.step === S) return { alpha: 0, glow: 0 };
+      current = { move: first, t: 0 };
+    }
+    const m = current.move, k = easeOut(current.t);
+    for (let i = 0; i < 3; i++) offset[i] = m.origin[i] + (m.to[i] - m.origin[i]) * k;
+    alpha = m === first && m.step === S ? clamp(current.t * 4) : 1;
+    if (m.step === S) glow = clamp(current.t * 4) * (1 - smooth((p - m.start - m.span * 1.15) / 0.2));
+    return { alpha: alpha, glow: glow };
+  }
+  function pose() {
+    const S = state.step, p = state.p;
+    const explode = S === PARTS ? smooth(p / 0.4) : 0;
+    const frame = ((state.frame % F) + F) % F;
+    items.forEach((item) => {
+      const inst = item.inst, ex = inst.ex;
+      let alpha = 1, dx = 0, dy = 0, dz = 0, glow = 0;
+      if (S <= PARTS) { dx = ex[0] * explode; dy = ex[1] * explode; dz = ex[2] * explode; }
+      else if (S === FIRST && inst.moves[0].step > S && p < 0.1) { alpha = 1 - clamp(p / 0.1); dx = ex[0]; dy = ex[1]; dz = ex[2]; }
+      else if (S < DRIVE) {
+        const a = assembled(inst.moves, S, p); alpha = a.alpha; glow = a.glow; dx = offset[0]; dy = offset[1]; dz = offset[2];
+        if ((DATA.ghost[inst.part] || []).indexOf(S) >= 0) alpha = Math.min(alpha, 0.32 + 0.68 * smooth((0.3 - p) / 0.1));  // 中に入る部品が見えるよう透かす
+      }
+      item.mesh.visible = alpha > 0.01;
+      if (!item.mesh.visible) return;
+      const m = item.frames ? sample(item.frames, frame, scratch) : inst.m;
+      setMatrix(item.mesh.matrix, m, dx, dy, dz);
+      const material = item.material, see = alpha < 0.999;
+      if (material.transparent !== see) { material.transparent = see; material.depthWrite = !see; material.needsUpdate = true; }
+      material.opacity = alpha;
+      item.mesh.castShadow = alpha > 0.6;
+      if (inst.part === "sc_eyes") { material.emissive.copy(item.base); material.emissiveIntensity = 1.4; }
+      else { material.emissive.copy(item.base).multiplyScalar(0.03 + 0.5 * glow); material.emissiveIntensity = 1; }
+    });
+    // 部品の場面ではばらした部品が床に潜らないよう、全体を持ち上げる
+    body.position.z = DATA.ground + 40 * (S === PARTS ? explode : (S === FIRST ? 1 - smooth(p / 0.15) : 0));
+  }
+
+  // ---------------------------------------------------------------- カメラ
+  function cameraFor() {
+    const S = state.step, to = CAMERAS[Math.min(S, CAMERAS.length - 1)], from = CAMERAS[Math.max(0, Math.min(S, CAMERAS.length - 1) - 1)];
+    const k = S === 0 ? 1 : smooth(state.p / 0.28);
+    let turn = to.az - from.az;
+    while (turn > Math.PI) turn -= 2 * Math.PI;
+    while (turn < -Math.PI) turn += 2 * Math.PI;
+    return { az: from.az + turn * k, pol: from.pol + (to.pol - from.pol) * k, r: from.r + (to.r - from.r) * k,
+      at: [0, 1, 2].map((i) => from.at[i] + (to.at[i] - from.at[i]) * k) };
+  }
+  let portrait = false;
+  function placeCamera() {
+    const cam = cameraFor();
+    const az = cam.az + state.dragAz, pol = Math.min(1.5, Math.max(0.2, cam.pol + state.dragPol)), r = cam.r * (portrait ? 1.22 : 1), s = Math.sin(pol);
+    camera.position.set(cam.at[0] + r * s * Math.sin(az), cam.at[1] + r * Math.cos(pol), cam.at[2] + r * s * Math.cos(az));
+    camera.lookAt(cam.at[0], cam.at[1], cam.at[2]);
+  }
+  let drag = null;
+  canvas.addEventListener("pointerdown", (event) => { drag = { x: event.clientX, y: event.clientY, id: event.pointerId }; });
+  window.addEventListener("pointerup", () => { drag = null; });
+  window.addEventListener("pointercancel", () => { drag = null; });
+  canvas.addEventListener("pointermove", (event) => {
+    if (!drag || drag.id !== event.pointerId) return;
+    state.dragAz -= (event.clientX - drag.x) * 0.008;
+    if (event.pointerType === "mouse") state.dragPol -= (event.clientY - drag.y) * 0.006;
+    drag.x = event.clientX; drag.y = event.clientY;
+  });
+  function resize() {
+    const box = canvas.parentElement.getBoundingClientRect();
+    if (!box.width || !box.height) return;
+    renderer.setSize(box.width, box.height, false);
+    portrait = box.width < box.height * 0.9;
+    camera.aspect = box.width / box.height;
+    camera.fov = portrait ? 38 : 30;
+    camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(canvas.parentElement);
+  resize();
+
+  // 完成と走る場面では、車軸が回り、後半は頭を上げて足が下りる。組立中は頭が水平・車軸 0° に戻して止める
+  let previous = performance.now();
+  function tick(now) {
+    const dt = Math.min(0.1, (now - previous) / 1000);
+    previous = now;
+    const S = state.step;
+    const driving = S === HERO || (S === PARTS && state.p < 0.12) || S === DRIVE;
+    if (pinnedFrame !== null) {
+      state.frame = pinnedFrame % F;
+    } else if (driving && !reduceMotion) {
+      state.frame = (state.frame + (12 / 60) * F * dt) % F;
+    } else if (state.frame > 0.01) {
+      state.frame += (F - state.frame) * Math.min(1, dt * 6);
+      if (F - state.frame < 0.05) state.frame = 0;
+    }
+    pose();
+    placeCamera();
+    renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>

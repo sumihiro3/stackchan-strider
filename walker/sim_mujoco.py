@@ -34,7 +34,8 @@ SERVO_STALL = 1.89 * 9.81e-2
 SERVO_NOLOAD = 80 * 2 * math.pi / 60
 # 関節の摩擦トルクの仮定 [N·m]
 FRICTION_PIN = 5e-4  # 印刷ピンの回転ジョイント
-FRICTION_SHAFT = 1e-3  # クランク軸(スリーブ 2 か所)
+# クランク軸(スリーブ 2 か所)。吊り下げ版は短軸 2 か所・平歯車の噛み合い 2 か所・つば 2 か所が加わるので 3 倍に見積もる
+FRICTION_SHAFT = 3e-3 if d.UNDERSLUNG else 1e-3
 FRICTION_TABLE = 7e-3  # ターンテーブルのスラスト面(摩擦係数 0.3 × 荷重 2.5 N × 半径 9 mm)
 # 感度確認用の上書き(環境変数): 関節摩擦の倍率、頭部重心の前後・上下ずれ [mm]
 FRICTION_SCALE = float(os.environ.get("STRIDER_JOINT_FRICTION_SCALE", "1"))
@@ -67,7 +68,16 @@ def _camera_axes(position, target) -> str:
     return _fmt(list(right) + list(up))
 
 
-def build_xml(friction: float) -> str:
+# 吊り下げ版: 駆動軸まわり(ピニオン・シャフト・スリーブ・平歯車)と歯車カバーは、質量だけを車体に載せる(回転はクランク軸の関節で代表させる)
+LOW_SHAFT_NAMES = ["pinion", "shaft", "sleeve", "spur_R", "spur_L", "cover_R", "cover_L"] if d.UNDERSLUNG else []
+
+
+def build_xml(friction: float, split: bool = False) -> str:
+    """split=True のとき、左右のクランクを別々の関節にする(旋回クラッチの検証用)。
+
+    左右それぞれがターンテーブルと等式拘束(bevel_R / bevel_L)でつながり、止める側を固定する等式拘束(lock_R / lock_L)を
+    無効の状態で持つ。実行中に data.eq_active を切り替えて、クラッチを切る・止めるを表す。
+    """
     mesh_dir = OUT / "meshes"
     mesh_dir.mkdir(parents=True, exist_ok=True)
     defs = d.part_defs()
@@ -87,7 +97,7 @@ def build_xml(friction: float) -> str:
     def geom_lines(names) -> str:
         return "\n".join(geoms[name] for name in names)
 
-    legs_xml = {"chassis": [], "shaft": []}
+    legs_xml = {"chassis": [], "shaft": [], "shaft_R": [], "shaft_L": []}
     equalities = []
     foot_geoms = {}
     for leg, sx, sy in d.LEGS:
@@ -96,13 +106,13 @@ def build_xml(friction: float) -> str:
 
         def point(joint: str, layer: float) -> str:
             x = sx * (d.L1 + (first + layer) * d.LAYER_PITCH + d.LAYER_T / 2)
-            return _fmt([x * MM, sy * joints[joint][0] * MM, joints[joint][1] * MM])
+            return _fmt([x * MM, sy * joints[joint][0] * MM, (joints[joint][1] + d.LEG_Z) * MM])
 
         def hinge(name: str, joint: str, layer: float) -> str:
             return f'<joint name="{leg}_{name}" type="hinge" axis="1 0 0" pos="{point(joint, layer)}" frictionloss="{FRICTION_PIN}" damping="1e-5"/>'
 
         foot_x0, foot_x1 = d.foot_x_range(sx, sy)
-        hy, hz = sy * joints["H"][0], joints["H"][1]
+        hy, hz = sy * joints["H"][0], joints["H"][1] + d.LEG_Z
         foot = (
             f'<geom name="{leg}_foot" type="cylinder" fromto="{_fmt([foot_x0 * MM, hy * MM, hz * MM, foot_x1 * MM, hy * MM, hz * MM])}" '
             f'size="{d.FOOT_R * MM}" friction="{friction} 0.005 0.0001" mass="0" rgba="0 0 0 0" group="3"/>'
@@ -126,7 +136,7 @@ def build_xml(friction: float) -> str:
   </body>
 </body>'''
         )
-        legs_xml["shaft"].append(
+        legs_xml["shaft" if not split else ("shaft_R" if sx > 0 else "shaft_L")].append(
             f'''<body name="{leg}_j">
   {hinge("j", "C", 0)}
   {geoms[leg + "_j"]}
@@ -141,9 +151,31 @@ def build_xml(friction: float) -> str:
 
     head_center = [0, ((d.SC_FRONT - 29.2) / 2 + HEAD_CG_SHIFT_Y) * MM, (d.TABLE_Z1 + (d.SC_HEAD_BOTTOM + d.SC_HEAD_TOP) / 2 + HEAD_CG_SHIFT_Z) * MM]
     start_z = -d.GROUND_Z * MM + 0.002
-    chassis_names = ["side_plate_R", "side_plate_L", "deck", "yoke", "sc_servo", "sc_head", "sc_core", "sc_face", "sc_eyes", "sc_camera", "sc_leds"]
-    shaft_names = ["pinion", "shaft", "sleeve", "crank_R", "crank_L", "clip_R", "clip_L"]
+    chassis_names = ["side_plate_R", "side_plate_L", "deck", "yoke", "cowl_F", "cowl_R", *LOW_SHAFT_NAMES, "sc_servo", "sc_head", "sc_core", "sc_face", "sc_eyes", "sc_camera", "sc_leds"]
+    shaft_names = ["crank_R", "crank_L", "clip_R", "clip_L"] if d.UNDERSLUNG else ["pinion", "shaft", "sleeve", "crank_R", "crank_L", "clip_R", "clip_L"]
     table_names = ["gear_table", "socket_frame", "sc_base"]
+    ratio = 1 if d.UNDERSLUNG else -1
+    if not split:
+        shaft_xml = f'''      <body name="shaft">
+        <joint name="shaft" type="hinge" axis="1 0 0" pos="0 0 {d.LEG_Z * MM:.5f}" frictionloss="{FRICTION_SHAFT}" damping="1e-5"/>
+        {geom_lines(shaft_names)}
+        {chr(10).join(legs_xml["shaft"])}
+      </body>'''
+        bevel_xml = f'<joint name="bevel" joint1="table" joint2="shaft" polycoef="0 {ratio} 0 0 0" solref="0.002 1"/>'
+    else:
+        shaft_xml = "\n".join(
+            f'''      <body name="shaft_{side}">
+        <joint name="shaft_{side}" type="hinge" axis="1 0 0" pos="0 0 {d.LEG_Z * MM:.5f}" frictionloss="{FRICTION_SHAFT / 2}" damping="1e-5"/>
+        {geom_lines([n for n in shaft_names if n.endswith("_" + side)])}
+        {chr(10).join(legs_xml["shaft_" + side])}
+      </body>'''
+            for side in ("R", "L")
+        )
+        bevel_xml = "\n".join(
+            f'<joint name="bevel_{side}" joint1="table" joint2="shaft_{side}" polycoef="0 {ratio} 0 0 0" solref="0.002 1"/>\n'
+            f'<joint name="lock_{side}" joint1="shaft_{side}" polycoef="0 0 0 0 0" solref="0.002 1" active="false"/>'
+            for side in ("R", "L")
+        )
     return f'''<mujoco model="stackchan_strider">
   <compiler angle="radian" meshdir="." autolimits="true"/>
   <option timestep="0.0005" integrator="implicitfast" cone="elliptic" impratio="10">
@@ -173,11 +205,7 @@ def build_xml(friction: float) -> str:
       <geom name="head_mass" type="box" pos="{_fmt(head_center)}" size="0.025 0.025 0.025" mass="{SC_HEAD_MASS:.4f}" rgba="0 0 0 0" group="3" friction="{friction} 0.005 0.0001"/>
       <geom name="belly" type="box" pos="0 0 -0.004" size="0.027 0.042 0.010" mass="0" rgba="0 0 0 0" group="3" friction="{friction} 0.005 0.0001"/>
       {chr(10).join(legs_xml["chassis"])}
-      <body name="shaft">
-        <joint name="shaft" type="hinge" axis="1 0 0" pos="0 0 0" frictionloss="{FRICTION_SHAFT}" damping="1e-5"/>
-        {geom_lines(shaft_names)}
-        {chr(10).join(legs_xml["shaft"])}
-      </body>
+{shaft_xml}
       <body name="table">
         <joint name="table" type="hinge" axis="0 0 1" pos="0 0 0" frictionloss="{FRICTION_TABLE}" damping="1e-5"/>
         {geom_lines(table_names)}
@@ -186,7 +214,7 @@ def build_xml(friction: float) -> str:
     </body>
   </worldbody>
   <equality>
-    <joint name="bevel" joint1="table" joint2="shaft" polycoef="0 -1 0 0 0" solref="0.002 1"/>
+{bevel_xml}
     {chr(10).join(equalities)}
   </equality>
   <actuator>
@@ -196,10 +224,10 @@ def build_xml(friction: float) -> str:
 '''
 
 
-def load(friction: float):
+def load(friction: float, split: bool = False):
     OUT.mkdir(parents=True, exist_ok=True)
-    xml = build_xml(friction)
-    path = OUT / "stackchan_strider.xml"
+    xml = build_xml(friction, split)
+    path = OUT / ("stackchan_strider_split.xml" if split else "stackchan_strider.xml")
     path.write_text(xml, encoding="utf-8")
     model = mujoco.MjModel.from_xml_path(str(path))
     return model, mujoco.MjData(model)

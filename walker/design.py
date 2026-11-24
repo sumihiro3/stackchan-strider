@@ -64,13 +64,35 @@ GEAR = BevelSpec(module=2.0, teeth=20, mate_teeth=20, face_width=8.0, backlash=0
 GEAR_BACK = 22.3  # 歯の背面を平らに切る位置(頂点からの距離)
 
 # 車体
-PLATE_IN = 23.5  # 側板の内面 |x|
+# ワイド4脚(改造): 側板・クランク・脚を外へ出し、脚がカラーの外側を通るようにする。
+# 脚がターンテーブルの下をくぐらなくなるので、そのぶん車体を下げられる(TABLE_Z0 を参照)。
+# 環境変数 STRIDER_WIDE=0 で元の寸法(側板の内面 23.5)に戻せる
+WIDE = os.environ.get("STRIDER_WIDE", "1") != "0"
+# 吊り下げ(改造 C): 駆動軸(傘歯車のピニオンが載る六角シャフト)は車体の下に残し、脚のクランク軸だけを LEG_Z 上へ移す。
+# 左右それぞれ、シャフトの端の平歯車(spur)がクランクと一体の平歯車を 1:1 で回す。車体は脚の間に沈み、全高が LEG_Z 下がる。
+# 側板はカラーの外側を上へ伸びるので、内面をカラーの外径より外に置く。STRIDER_UNDERSLUNG=0 でワイド4脚の版に戻せる
+UNDERSLUNG = os.environ.get("STRIDER_UNDERSLUNG", "1") != "0"
+PLATE_IN = 45.5 if UNDERSLUNG else 37.5 if WIDE else 23.5  # 側板の内面 |x|
 PLATE_T = 5.0
 PLATE_OUT = PLATE_IN + PLATE_T
-CRANK_T = 4.0
+# 平歯車(並歯、圧力角 20°)。歯数は 6 の倍数(六角シャフトのどの向きに差しても歯の位置が同じ)で偶数(左右のピンを 180° ずらせる)
+SPUR_MODULE, SPUR_TEETH = 1.4, 30
+SPUR_R = SPUR_MODULE * SPUR_TEETH / 2  # ピッチ円半径
+SPUR_T = 6.0  # 歯幅
+SPUR_BACKLASH = 0.2  # 歯車 1 枚あたりの歯厚の減らし量(2 枚で 0.4 mm)
+SPUR_FACE_GAP = 0.2  # 歯車の面と、歯車カバーの面のすきま
+COVER_T = 2.0  # 歯車カバーの厚み
+COVER_LINK_CLEAR = 0.5  # 歯車カバーの外面と、リンク第1層のすきま
+STUB_R = 6.0  # クランク歯車を受ける側板の短軸の半径
+LEG_Z = 2 * SPUR_R if UNDERSLUNG else 0.0  # 駆動軸から見た、脚のクランク軸の高さ
+CRANK_T = SPUR_T + SPUR_FACE_GAP + COVER_T + COVER_LINK_CLEAR - GAP if UNDERSLUNG else 4.0  # クランクの内面からピンの根元の面まで
 CRANK_R = 12.0
-L0 = PLATE_OUT + 0.2  # クランク円板の内面
+L0 = PLATE_OUT + 0.2  # クランク(吊り下げ版では平歯車)の内面
 L1 = L0 + CRANK_T + GAP  # リンク第1層の内面
+COVER_X0 = L0 + SPUR_T + SPUR_FACE_GAP  # 歯車カバーの内面
+COVER_X1 = COVER_X0 + COVER_T
+THRUST_R = 9.0  # ピニオンとスリーブのつば(側板の内面に当たって、軸方向の位置を決める)の半径
+THRUST_GAP = 0.2  # つばと側板の内面のすきま(片側)
 SHAFT_AF = 8.0  # 六角シャフト二面幅(呼び寸法。穴はこれ + SHAFT_BORE_CLEARANCE)
 SHAFT_BORE_CLEARANCE = 0.3  # 六角穴の広げ量(二面幅)
 SHAFT_UNDERSIZE = 0.2  # シャフト本体を呼び寸法より細くする量(二面幅)。穴との差は合計 0.5
@@ -102,7 +124,14 @@ def _leg_extents() -> tuple[float, float]:
 
 
 LEG_TOP, FOOT_LOW = _leg_extents()
-TABLE_Z0 = max(LEG_TOP + END_R + 0.8, GEAR_BACK + 0.5)  # ターンテーブル円板の下面
+# 脚の一番内側の層(L1)がカラーの外にあれば、脚はターンテーブルの下を通らない
+LEGS_OUTSIDE_COLLAR = L1 >= COLLAR_R_OUT + 1.5
+# 車体を下げる量の下限は歯車の背面。ただしデッキのボス(ターンテーブルの軸受け)が短くなると円板が傾きやすくなるので、
+# 歯車の背面より TABLE_LIFT だけ上に止めて、軸の受けを 17 mm 残す
+TABLE_LIFT = 2.7
+TABLE_Z0 = (  # ターンテーブル円板の下面
+    GEAR_BACK + TABLE_LIFT if LEGS_OUTSIDE_COLLAR else max(LEG_TOP + END_R + 0.8, GEAR_BACK + 0.5)
+)
 # デッキのボス上面 = ターンテーブルのスラスト面。ボスを歯車の中まで伸ばし、軸の受けを長くして傾きを抑える(円板の下に 2 mm 残す)
 BOSS_TOP = TABLE_Z0 - 2.0
 TABLE_Z1 = TABLE_Z0 + TABLE_T  # ポケット床 = スタックチャン土台の底面
@@ -110,7 +139,7 @@ FRAME_Z1 = TABLE_Z1 + FRAME_H
 COLLAR_Z0 = TABLE_Z0 + 0.4
 COLLAR_Z1 = FRAME_Z1 + 3.4
 PITCH_Z = TABLE_Z1 + SC_PITCH_AXIS_H
-GROUND_Z = FOOT_LOW - FOOT_R
+GROUND_Z = FOOT_LOW - FOOT_R + LEG_Z
 
 COLORS = {
     "chassis": "#2d3340",
@@ -440,6 +469,83 @@ def _truss(corners, last_radius: float = END_R) -> CrossSection:
     return outline - window
 
 
+# ---------------------------------------------------------------- 平歯車(吊り下げ版)
+def cone_x(r0: float, r1: float, x0: float, x1: float, y: float = 0.0, z: float = 0.0, seg: int = SEG) -> Manifold:
+    """X軸方向の円錐台(x0 で半径 r0、x1 で半径 r1)。"""
+    return Manifold.cylinder(x1 - x0, r0, r1, seg).translate((0, 0, x0)).transform(AXIS_Z_TO_X[:3]).translate((0, y, z))
+
+
+def spur_section(tooth_center_deg: float) -> CrossSection:
+    """インボリュート平歯車の断面。tooth_center_deg の向きに歯の中心が 1 つ来る。"""
+    m, count = SPUR_MODULE, SPUR_TEETH
+    r = SPUR_R
+    pressure = math.radians(20.0)
+    base, tip, root = r * math.cos(pressure), r + m, r - 1.25 * m
+    thickness = math.pi * m / 2 - SPUR_BACKLASH  # ピッチ円上の歯厚
+
+    def inv(angle: float) -> float:
+        return math.tan(angle) - angle
+
+    def half_angle(radius: float) -> float:
+        return thickness / (2 * r) + inv(pressure) - inv(math.acos(min(1.0, base / radius)))
+
+    radii = np.linspace(max(base, root), tip, 12)
+    points = []
+    for n in range(count):
+        center = math.radians(tooth_center_deg) + 2 * math.pi * n / count
+        flank = [(radius, half_angle(radius)) for radius in radii]
+        if root < base:
+            flank.insert(0, (root, half_angle(base)))
+        points += [(radius * math.cos(center - half), radius * math.sin(center - half)) for radius, half in flank]
+        points += [(radius * math.cos(center + half), radius * math.sin(center + half)) for radius, half in reversed(flank)]
+    return polygon(points)
+
+
+def _dimple(angle_deg: float, radius: float, top: float) -> Manifold:
+    """合わせ印(歯車の外面の小さなくぼみ)。"""
+    angle = math.radians(angle_deg)
+    return cyl(0.9, top - 0.6, top + 0.2, 24).translate((radius * math.cos(angle), radius * math.sin(angle), 0))
+
+
+SPUR_MARK_R = SPUR_R - 4.0
+
+
+@lru_cache(maxsize=None)
+def spur_part() -> Manifold:
+    """シャフトの端に差す平歯車(ローカル: 軸 = X、内面 x=0)。六角穴は貫通。基準の向きで真上(+Z)が歯の谷。
+
+    外面の 6 つのくぼみは合わせ印(六角のどの向きに差しても、真上に 1 つ来る)。
+    """
+    body = spur_section(90.0 + 180.0 / SPUR_TEETH).extrude(SPUR_T)
+    body -= hexagon(SHAFT_AF + SHAFT_BORE_CLEARANCE).extrude(SPUR_T + 2).translate((0, 0, -1))
+    for n in range(6):
+        body -= _dimple(90.0 + 60.0 * n, SPUR_MARK_R, SPUR_T)
+    return apply(body, AXIS_Z_TO_X)
+
+
+@lru_cache(maxsize=None)
+def cover_part() -> Manifold:
+    """歯車カバー(右側、ワールド姿勢のまま。左は Z 軸まわり 180° で同じ部品)。
+
+    固定ピボット B の 2 本の突起に通し、脚のリンクと C クリップで一緒に留まる。2 枚の平歯車が外へ抜けるのと傾くのを止める。
+    """
+    b_y, b_z = LEG.a, LEG_Z - LEG.l
+    rim = SPUR_R + SPUR_MODULE + COVER_MARGIN
+    section = hull2(circle(rim, 0, 0), circle(rim, 0, LEG_Z), circle(8.0, -b_y, b_z), circle(8.0, b_y, b_z))
+    section -= circle(CRANK_R + 0.4, 0, LEG_Z)  # クランクの円板が通る穴
+    for y in (-7.0, 0.0, 7.0):  # 下の歯車が見えるスリット
+        section -= hull2(circle(1.1, y, -8.0, 24), circle(1.1, y, 8.0, 24))
+    cover = plate_yz(section, COVER_X0, COVER_X1)
+    # B の突起のまわりの座。後ろ(第1層から使う)は低く、前(第2層から使う)は 1 層ぶん高い
+    for sign, first_layer in ((-1, 0), (1, 1)):
+        cover += cyl_x(4.6, COVER_X1 - 0.01, L1 + first_layer * LAYER_PITCH - GAP, sign * b_y, b_z)
+        cover -= cyl_x(STUD_R + HOLE_FIT, COVER_X0 - 1, L1 + 2 * LAYER_PITCH, sign * b_y, b_z, 48)
+    return cover
+
+
+COVER_MARGIN = 1.2  # 歯先円からカバーの縁までの余り
+
+
 # ---------------------------------------------------------------- 歯車
 @lru_cache(maxsize=None)
 def _teeth() -> Manifold:
@@ -475,6 +581,9 @@ def pinion_part() -> Manifold:
     # 歯の側へ伸ばした筒が左側板の軸受を兼ねる(別部品の長いスリーブを無くす)
     snout = cyl_x(SLEEVE_R, -L0, PINION_FRONT)
     bore = apply(hexagon(SHAFT_AF + SHAFT_BORE_CLEARANCE).extrude(L0 + GEAR_BACK + 2), AXIS_Z_TO_X).translate((-L0 - 1, 0, 0))
+    if UNDERSLUNG:  # 左側板の内面に当たるつば。歯の側は 45° の斜面(筒を上にして造形するとき、支え無しで広がる)
+        face = -(PLATE_IN - THRUST_GAP)
+        snout += cyl_x(THRUST_R, face, face + 3.0) + cone_x(THRUST_R, SLEEVE_R, face + 3.0, face + 3.0 + (THRUST_R - SLEEVE_R))
     return teeth + hub + snout - bore
 
 
@@ -484,7 +593,7 @@ PINION_FRONT = 12.5
 # ---------------------------------------------------------------- 駆動軸まわり
 @lru_cache(maxsize=None)
 def shaft_part() -> Manifold:
-    half = L0 + 3.0 - 0.1
+    half = L0 + SPUR_T - 0.3 if UNDERSLUNG else L0 + 3.0 - 0.1
     return apply(hexagon(SHAFT_AF - SHAFT_UNDERSIZE).extrude(2 * half), AXIS_Z_TO_X).translate((-half, 0, 0))
 
 
@@ -496,16 +605,37 @@ def _sleeve(x0: float, x1: float) -> Manifold:
 @lru_cache(maxsize=None)
 def sleeve_part() -> Manifold:
     """ピニオン背面と右クランクの間に入る短いスリーブ(右側板の軸受)。"""
-    return _sleeve(GEAR_BACK, L0)
+    if not UNDERSLUNG:
+        return _sleeve(GEAR_BACK, L0)
+    # 吊り下げ版: 右側板の内面に当たるつばを付ける(傘歯車の押し返す力を、側板で受ける)
+    face = PLATE_IN - THRUST_GAP
+    collar = cyl_x(THRUST_R, face - 3.0, face) + cone_x(SLEEVE_R, THRUST_R, face - 3.0 - (THRUST_R - SLEEVE_R), face - 3.0)
+    bore = apply(hexagon(SHAFT_AF + SHAFT_BORE_CLEARANCE).extrude(L0 - GEAR_BACK + 2), AXIS_Z_TO_X).translate((GEAR_BACK - 1, 0, 0))
+    return _sleeve(GEAR_BACK, L0) + (collar - bore)
 
 
 PIN_CLEAR = 4 * LAYER_PITCH + END_GAP  # クランクの面から、リンク 4 枚を重ねた上の面 + END_GAP まで
+STUB_BORE = SPUR_T + 0.2  # クランク歯車の止まり穴の深さ(ピンの根元に 2 mm 余りの肉を残す)
+STUB_ROOF = 1.2  # 止まり穴の奥を絞る高さ
+STUB_LEN = STUB_BORE - 0.6 + (L0 - PLATE_OUT)  # 側板の外面からの短軸の長さ(穴の底と 0.6 mm 空ける)
 
 
 @lru_cache(maxsize=None)
 def crank_part() -> Manifold:
-    """クランク(ローカル: 軸 = X、内面 x=0、ピンは +Y 方向へ偏心)。六角の止まり穴でシャフトに差す。"""
+    """クランク(ローカル: 軸 = X、内面 x=0、ピンは +Y 方向へ偏心)。六角の止まり穴でシャフトに差す。
+
+    吊り下げ版は平歯車と一体で、側板の短軸に止まり穴でかぶせて回す。ピンを水平にしたとき真上と真下に歯の中心が来る。
+    """
     radius = LEG.m
+    if UNDERSLUNG:
+        gear = spur_section(90.0).extrude(SPUR_T)
+        gear -= _dimple(270.0, SPUR_MARK_R, SPUR_T)  # 合わせ印: ピンを水平にしたとき真下
+        disc = circle(CRANK_R).extrude(CRANK_T - SPUR_T + 0.01).translate((0, 0, SPUR_T - 0.01))
+        # 止まり穴の天井は橋渡しで造形されるので、奥を 45° で絞って橋の径を小さくする(短軸の先も同じ角度で細い)
+        bore = circle(STUB_R + HOLE_FIT).extrude(STUB_BORE - STUB_ROOF + 1).translate((0, 0, -1))
+        bore += Manifold.cylinder(STUB_ROOF, STUB_R + HOLE_FIT, STUB_R + HOLE_FIT - STUB_ROOF, SEG).translate((0, 0, STUB_BORE - STUB_ROOF))
+        pin = grooved_pin(CRANK_T, PIN_CLEAR).translate((radius, 0, 0))
+        return apply(gear + disc - bore + pin, AXIS_Z_TO_X)
     disc = hull2(circle(CRANK_R), circle(STUD_R + 3.0, radius, 0)).extrude(CRANK_T)
     socket = hexagon(SHAFT_AF + SHAFT_BORE_CLEARANCE).extrude(3.0)
     pin = grooved_pin(CRANK_T, PIN_CLEAR).translate((radius, 0, 0))
@@ -549,6 +679,8 @@ def _snap_tenon(width: float, length: float, slot_depth: float) -> CrossSection:
 TENON_W = 6.0
 DECK_TENON_Y = 32.0
 COLLAR_LUG_T = 4.0
+LUG_INNER_X = 20.9  # ヨークの耳の内側の端 |x|(元の設計での値)
+DECK_HALF_Y = DECK_TENON_Y + TENON_W / 2 + 2.0  # デッキの前後の端 |y|
 
 
 def plate_stud_clear(first_layer: int) -> float:
@@ -559,6 +691,8 @@ def plate_stud_clear(first_layer: int) -> float:
 @lru_cache(maxsize=None)
 def side_plate_part() -> Manifold:
     """右側板(ワールド姿勢のまま)。左は Z 軸まわり 180° 回転で同じ部品。"""
+    if UNDERSLUNG:
+        return _side_plate_underslung()
     b_y, b_z = LEG.a, -LEG.l
     section = hull2(circle(10.0, -b_y, b_z), circle(10.0, b_y, b_z), circle(13.0, 0, 1.0))
     for sign in (1, -1):
@@ -579,12 +713,46 @@ def side_plate_part() -> Manifold:
     return plate
 
 
+YOKE_TENON_Y = 32.0  # 吊り下げ版: ヨークの腕のツメが側板に入る位置 |y|
+
+
+def _side_plate_underslung() -> Manifold:
+    """吊り下げ版の右側板。下に駆動軸の軸受け穴、上にクランク歯車の短軸と固定ピボット B、途中にデッキとヨークのツメの角穴。"""
+    b_y, b_z = LEG.a, LEG_Z - LEG.l
+    deck_mid = (DECK_Z0 + DECK_Z1) / 2
+    lug_mid = COLLAR_Z0 + COLLAR_LUG_T / 2
+    nodes = [circle(13.0, 0, 0), circle(11.0, 0, LEG_Z), circle(9.0, -b_y, b_z), circle(9.0, b_y, b_z)]
+    for sign in (1, -1):
+        nodes += [circle(7.5, sign * DECK_TENON_Y, deck_mid), circle(7.5, sign * YOKE_TENON_Y, lug_mid)]
+    section = hull2(*nodes)
+    section -= circle(SLEEVE_R + HOLE_FIT)
+    for sign in (1, -1):
+        section -= rect(sign * DECK_TENON_Y - TENON_W / 2 - 0.2, sign * DECK_TENON_Y + TENON_W / 2 + 0.2, DECK_Z0 - 0.15, DECK_Z1 + 0.15)
+        section -= rect(sign * YOKE_TENON_Y - TENON_W / 2 - 0.2, sign * YOKE_TENON_Y + TENON_W / 2 + 0.2, COLLAR_Z0 - 0.15, COLLAR_Z0 + COLLAR_LUG_T + 0.15)
+    plate = plate_yz(section, PLATE_IN, PLATE_OUT)
+    # クランク歯車の短軸(先を 1.4 mm 面取り)
+    tip = PLATE_OUT + STUB_LEN
+    plate += cyl_x(STUB_R, PLATE_OUT - 0.01, tip - 1.4, 0, LEG_Z) + cone_x(STUB_R, STUB_R - 1.4, tip - 1.4, tip, 0, LEG_Z)
+    # 固定ピボット B の突起。肩は歯車カバーの内面まで(カバーをここに座らせる)
+    for sign, first_layer in ((-1, 0), (1, 1)):
+        shoulder = cyl_x(4.6, PLATE_OUT - 0.01, COVER_X0 - 0.05, sign * b_y, b_z)
+        pivot = apply(stud(0, 0, 0, plate_stud_clear(first_layer)), AXIS_Z_TO_X)
+        plate += shoulder + pivot.translate((PLATE_OUT, sign * b_y, b_z))
+    return plate
+
+
 @lru_cache(maxsize=None)
 def deck_part() -> Manifold:
     """左右の側板をつなぎ、ターンテーブルの軸を受けるデッキ。"""
-    half_y = DECK_TENON_Y + TENON_W / 2 + 2.0
+    half_y = DECK_HALF_Y
     plan = rect(-PLATE_IN + 0.1, PLATE_IN - 0.1, -half_y, half_y)
-    plan -= rect(PINION_FRONT - 1.0, PLATE_IN, -(GEAR.tip_radius + 1.6), GEAR.tip_radius + 1.6)
+    plan -= rect(PINION_FRONT - 1.0, min(PLATE_IN, GEAR_BACK + 1.5), -(GEAR.tip_radius + 1.6), GEAR.tip_radius + 1.6)
+    if UNDERSLUNG:  # ピニオンとスリーブのつば(斜面を含む)の逃がし
+        reach = 3.0 + (THRUST_R - SLEEVE_R) + 1.0
+        for sx in (1, -1):
+            plan -= rect(min(sx * (PLATE_IN - reach), sx * PLATE_IN), max(sx * (PLATE_IN - reach), sx * PLATE_IN), -(THRUST_R + 1.5), THRUST_R + 1.5)
+    for sy in (1, -1):  # カウルのツメ(山)が落ちる溝
+        plan -= rect(-COWL_RIDGE_HALF_W - 1.0, COWL_RIDGE_HALF_W + 1.0, sy * COWL_RIDGE_Y - 1.25, sy * COWL_RIDGE_Y + 1.25)
     for sx in (1, -1):
         for sy in (1, -1):
             tenon = _snap_tenon(TENON_W, PLATE_T + 0.2, 11.0).rotate(-90 * sx).translate((sx * (PLATE_IN - 0.1), sy * DECK_TENON_Y))
@@ -649,8 +817,16 @@ def yoke_part() -> Manifold:
     outside = CrossSection.circle(80, 96) - CrossSection.circle(COLLAR_R_IN, 128)
     for sx in (1, -1):
         for sy in (1, -1):
+            if UNDERSLUNG:  # 側板がカラーの横を通るので、横向きの腕とスナップのツメで側板の角穴に留める(デッキと同じ留め方)
+                edge = sx * (PLATE_IN - 0.1)
+                arm = rect(min(sx * 28.0, edge), max(sx * 28.0, edge), sy * YOKE_TENON_Y - 5.0, sy * YOKE_TENON_Y + 5.0) ^ outside
+                tenon = _snap_tenon(TENON_W, PLATE_T + 0.2, 11.0).rotate(-90 * sx).translate((edge, sy * YOKE_TENON_Y))
+                yoke += (arm + tenon).extrude(COLLAR_LUG_T).translate((0, 0, COLLAR_Z0))
+                continue
             cx = sx * (PLATE_IN + PLATE_T / 2)
-            lug = rect(cx - PLATE_T / 2 - 2.6, cx + PLATE_T / 2 + 2.6, sy * HORN_Y - 6.2, sy * HORN_Y + 6.2)
+            # 内側の端は元の設計の位置(|x| = 20.9)より外へ出さない。輪との付け根の長さを元と同じに保つ
+            reach = min(abs(cx) - PLATE_T / 2 - 2.6, LUG_INNER_X)
+            lug = rect(min(sx * reach, cx + sx * (PLATE_T / 2 + 2.6)), max(sx * reach, cx + sx * (PLATE_T / 2 + 2.6)), sy * HORN_Y - 6.2, sy * HORN_Y + 6.2)
             slot = rect(cx - PLATE_T / 2 - 0.2, cx + PLATE_T / 2 + 0.2, sy * HORN_Y - TENON_W / 2 - 0.2, sy * HORN_Y + TENON_W / 2 + 0.2)
             yoke += ((lug ^ outside) - slot).extrude(COLLAR_LUG_T).translate((0, 0, COLLAR_Z0))
             yoke -= slot.extrude(COLLAR_LUG_T + 2).translate((0, 0, COLLAR_Z0 - 1))
@@ -685,6 +861,76 @@ def yoke_part() -> Manifold:
     )
     side = arm + pad - groove
     return yoke + side + side.mirror((1, 0, 0))
+
+
+# ---------------------------------------------------------------- 外装: カウル(改造で追加)
+# 車体の前後、左右の側板の間に付ける多面体の殻。デッキの端に差し込み、上の舌の山がデッキの溝に落ちて留まる。
+# 脚は側板の外側にあるので、歩行機構には触れない。前後で同じ部品(後ろは Z まわり 180°)。付けなくても歩ける
+COWL_LEN = 20.0  # デッキの端から鼻先まで
+COWL_REAR_HALF_W, COWL_NOSE_HALF_W = 30.0, 14.0
+COWL_REAR_Z = (-16.0, 22.0)  # 下はピニオンが正面から隠れる深さまで
+COWL_NOSE_Z = (0.0, 13.0)
+COWL_REAR_CHAMFER, COWL_NOSE_CHAMFER = 5.0, 2.5
+COWL_WALL = 1.8
+COWL_LIP_T = 1.2  # デッキを挟む舌の厚み
+COWL_TONGUE = 10.5  # 舌がデッキに掛かる長さ
+COWL_TONGUE_HALF_W = 24.0
+COWL_FIT = 0.15  # 舌とデッキの面のすきま(片側)
+COWL_RIDGE_H = 0.5  # 山の高さ。デッキへの掛かりは COWL_RIDGE_H - COWL_FIT
+COWL_RIDGE_Y = DECK_HALF_Y - 9.0  # 山(とデッキの溝)の中心 y
+COWL_RIDGE_HALF_W = 11.5
+
+
+def _cowl_ring(y: float, half_w: float, z_range: tuple[float, float], chamfer: float, inset: float = 0.0) -> list[tuple[float, float, float]]:
+    """カウルの断面(角を落とした四角 = 八角形)の頂点。inset だけ内側へ寄せられる。"""
+    w, z0, z1 = half_w - inset, z_range[0] + inset, z_range[1] - inset
+    c = max(chamfer - inset * (2 - math.sqrt(2)), 0.2)
+    out = []
+    for sx in (1, -1):
+        out += [(sx * w, y, z1 - c), (sx * (w - c), y, z1), (sx * (w - c), y, z0), (sx * w, y, z0 + c)]
+    return out
+
+
+@lru_cache(maxsize=None)
+def cowl_part() -> Manifold:
+    """前のカウル(ワールド姿勢のまま、鼻先が +Y)。"""
+    y0, y1 = DECK_HALF_Y + 0.2, DECK_HALF_Y + COWL_LEN
+    rear_z = (COWL_REAR_Z[0], min(COWL_REAR_Z[1], COLLAR_Z0 - 2.5))
+    outer = Manifold.hull_points(
+        _cowl_ring(y0, COWL_REAR_HALF_W, rear_z, COWL_REAR_CHAMFER) + _cowl_ring(y1, COWL_NOSE_HALF_W, COWL_NOSE_Z, COWL_NOSE_CHAMFER)
+    )
+    inner = Manifold.hull_points(
+        _cowl_ring(y0 - 1.0, COWL_REAR_HALF_W, rear_z, COWL_REAR_CHAMFER, COWL_WALL)
+        + _cowl_ring(y1 - COWL_WALL, COWL_NOSE_HALF_W, COWL_NOSE_Z, COWL_NOSE_CHAMFER, COWL_WALL)
+    )
+    shell = outer - inner
+    # 上面の 3 本のスリット(飾り)。舌より上だけを切る
+    for x in (-7.0, 0.0, 7.0):
+        shell -= box(x - 1.1, x + 1.1, y0 + 5.0, y0 + 14.5, DECK_Z1 + COWL_FIT + COWL_LIP_T + 0.8, rear_z[1] + 5.0)
+    # デッキを上下から挟む舌。殻の中では鼻先まで通して、鼻先を下にした造形でベッドから立ち上がるようにする
+    top0 = DECK_Z1 + COWL_FIT
+    bottom1 = DECK_Z0 - COWL_FIT
+    lips = None
+    for z0, z1 in ((top0, top0 + COWL_LIP_T), (bottom1 - COWL_LIP_T, bottom1)):
+        lip = box(-COWL_REAR_HALF_W - 1, COWL_REAR_HALF_W + 1, y0 - 0.5, y1, z0, z1) ^ outer
+        lip += box(-COWL_TONGUE_HALF_W, COWL_TONGUE_HALF_W, DECK_HALF_Y - COWL_TONGUE, y0 + 0.5, z0, z1)
+        lips = lip if lips is None else lips + lip
+    # デッキの端が当たる止め(舌と舌の間をふさぐ)
+    stop = box(-COWL_TONGUE_HALF_W, COWL_TONGUE_HALF_W, y0, y0 + 2.0, bottom1 - 0.01, top0 + 0.01)
+    # 上の舌の下面の山(前後とも斜面なので、押せば入り、引けば抜ける)
+    ridge = plate_yz(
+        polygon(
+            [
+                (COWL_RIDGE_Y - 1.0, top0 + 0.01),
+                (COWL_RIDGE_Y - 0.35, top0 - COWL_RIDGE_H),
+                (COWL_RIDGE_Y + 0.35, top0 - COWL_RIDGE_H),
+                (COWL_RIDGE_Y + 1.0, top0 + 0.01),
+            ]
+        ),
+        -COWL_RIDGE_HALF_W,
+        COWL_RIDGE_HALF_W,
+    )
+    return shell + lips + stop + ridge
 
 
 # ---------------------------------------------------------------- スタックチャン(表示と干渉確認用)
@@ -791,12 +1037,14 @@ def part_defs() -> dict[str, PartDef]:
         PartDef("side_plate", "側板", side_plate_part, c["chassis"], 2),
         PartDef("deck", "デッキ", deck_part, c["chassis"], 1),
         PartDef("yoke", "ヨーク(カラー+イヤーパッド)", yoke_part, c["accent"], 1),
+        PartDef("cowl", "カウル(前後の外装)", cowl_part, c["accent"], 2),
         PartDef("gear_table", "ターンテーブル歯車", gear_table_part, c["accent"], 1),
         PartDef("socket_frame", "ソケット枠", socket_frame_part, c["chassis"], 1),
         PartDef("pinion", "ピニオン", pinion_part, c["accent"], 1),
         PartDef("shaft", "六角シャフト", shaft_part, c["link"], 1),
         PartDef("sleeve", "スリーブ", sleeve_part, c["link"], 1),
-        PartDef("crank", "クランク", crank_part, c["accent"], 2),
+        PartDef("crank", "クランク歯車" if UNDERSLUNG else "クランク", crank_part, c["accent"], 2),
+        *([PartDef("spur", "シャフトの平歯車", spur_part, c["accent"], 2), PartDef("cover", "歯車カバー", cover_part, c["chassis"], 2)] if UNDERSLUNG else []),
         PartDef("clip", "Cクリップ", clip_part, c["link"], 22),
         PartDef("link_j", "リンク1(j: C–D)", lambda: link_part("j"), c["link"], 4),
         PartDef("link_k", "リンク2(k: C–F)", lambda: link_part("k"), c["link"], 4),
@@ -850,7 +1098,7 @@ def leg_matrix(sx: int, sy: int, layer_x: float, origin: np.ndarray, angle: floa
         [
             [0, 0, sx, sx * layer_x],
             [sy * c, -sy * s, 0, sy * origin[0]],
-            [s, c, 0, origin[1]],
+            [s, c, 0, origin[1] + LEG_Z],
         ]
     )
 
@@ -861,7 +1109,7 @@ def foot_contacts(theta: float) -> np.ndarray:
     for _, sx, sy in LEGS:
         joints = solve_leg(LEG, leg_canonical_angle(theta, sx, sy))
         x0, x1 = foot_x_range(sx, sy)
-        y, z = sy * joints["H"][0], joints["H"][1] - FOOT_R
+        y, z = sy * joints["H"][0], joints["H"][1] - FOOT_R + LEG_Z
         out.append([[x0, y, z], [x1, y, z]])
     return np.array(out)
 
@@ -892,26 +1140,37 @@ def instances(theta: float, head_yaw: float = 0.0, with_stackchan: bool = True, 
         Instance("side_plate_L", "side_plate", ROT180_Z, "chassis"),
         Instance("deck", "deck", np.eye(4), "chassis"),
         Instance("yoke", "yoke", np.eye(4), "chassis"),
+        Instance("cowl_F", "cowl", np.eye(4), "chassis"),
+        Instance("cowl_R", "cowl", ROT180_Z, "chassis"),
     ]
-    table = rot_z(-theta)
+    # 吊り下げ版は平歯車で向きが 1 回反転するので、駆動軸とターンテーブルはクランクと逆に回る
+    drive = -theta if UNDERSLUNG else theta
+    table = rot_z(-drive)
     out += [
         Instance("gear_table", "gear_table", table, "table"),
         Instance("socket_frame", "socket_frame", table, "table"),
     ]
-    spin = rot_x(theta)
+    spin = rot_x(drive)
     out += [
         Instance("pinion", "pinion", spin, "shaft"),
         Instance("shaft", "shaft", spin, "shaft"),
         Instance("sleeve", "sleeve", spin, "shaft"),
     ]
+    if UNDERSLUNG:
+        out += [
+            Instance("spur_R", "spur", translation(L0, 0, 0) @ spin, "shaft"),
+            Instance("spur_L", "spur", translation(-L0, 0, 0) @ spin @ ROT180_Z, "shaft"),
+            Instance("cover_R", "cover", np.eye(4), "chassis"),
+            Instance("cover_L", "cover", ROT180_Z, "chassis"),
+        ]
     clip_x = CRANK_T + clip_seat(PIN_CLEAR)
     for sx, tag in ((1, "R"), (-1, "L")):
         pin = crank_pin_angle(theta, sx)
         # クランクローカルはピンが +Y、円板から +X へピンが伸びる。左は Z まわり 180° で外向きを -X にする
         base = rot_x(pin) if sx > 0 else rot_x(pin + math.pi) @ ROT180_Z
-        out.append(Instance(f"crank_{tag}", "crank", translation(sx * L0, 0, 0) @ base, "shaft"))
+        out.append(Instance(f"crank_{tag}", "crank", translation(sx * L0, 0, LEG_Z) @ base, "shaft"))
         clip_local = translation(clip_x, LEG.m, 0)
-        out.append(Instance(f"clip_{tag}", "clip", translation(sx * L0, 0, 0) @ base @ clip_local, "shaft"))
+        out.append(Instance(f"clip_{tag}", "clip", translation(sx * L0, 0, LEG_Z) @ base @ clip_local, "shaft"))
     for name, sx, sy in LEGS:
         joints = solve_leg(LEG, leg_canonical_angle(theta, sx, sy))
         first = leg_first_layer(sx, sy)
@@ -937,7 +1196,7 @@ def instances(theta: float, head_yaw: float = 0.0, with_stackchan: bool = True, 
         # 側板の B の突起のクリップ
         plate = np.eye(4) if sx > 0 else ROT180_Z
         local_sign = -1 if first == 0 else 1
-        seat = translation(PLATE_OUT + clip_seat(plate_stud_clear(first)), local_sign * LEG.a, -LEG.l) @ rot_x(CLIP_MOUTH["B"])
+        seat = translation(PLATE_OUT + clip_seat(plate_stud_clear(first)), local_sign * LEG.a, LEG_Z - LEG.l) @ rot_x(CLIP_MOUTH["B"])
         out.append(Instance(f"{name}_clip_B", "clip", plate @ seat, "chassis"))
     if with_stackchan:
         seat = translation(0, 0, TABLE_Z1)

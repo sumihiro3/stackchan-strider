@@ -1,9 +1,12 @@
-// Stackchan Strider: M5Stack 製品版スタックチャン(K151)を、首振りサーボの連続回転で歩かせるファームウェア。
+// スタックチャン・ピボット: M5Stack 製品版スタックチャン(K151)を、ピボット(car/pivot_design.py)として走らせるファームウェア。
 //
-//  - 画面はスタックチャンの顔(m5stack-avatar)。歩行中に笑顔にするかは設定で選べる(初期状態は変えない)
-//  - はじめて起動すると設定用の Wi-Fi を出し、画面の QR をスマホで読んで家の Wi-Fi を設定する
-//  - 家の Wi-Fi につながると、画面に操作ページの QR を出す。スマホのブラウザから前進・後退・停止
-//  - 操作ページのボタンを押している間だけ歩く。押している間は 0.3 秒ごとに合図が来て、0.9 秒途切れたら自動で止まる
+//  - 首振り(ヨー)サーボを回し続けて駆動輪を回す。頭が水平(うなずき 0°)なら直進し、頭を上げると足が下りて、その場で回る
+//  - 操作は 2 通り。どちらもスティック 1 本(上下 = 前進・後退と速さ、左右に大きく倒す = 旋回)
+//    1. スマホのブラウザのジョイスティック。家の Wi-Fi 経由。触れている間は 0.1 秒ごとに値が来て、0.9 秒途切れたら止まる
+//    2. 手に持つコントローラー(M5Stack StopWatch)。ESP-NOW で直接つなぐ(espnow_pad.cpp)
+//  - うなずきは 0〜30° に必ず収める(car_control.h)
+//  - 画面はスタックチャンの顔(m5stack-avatar)。走っている間に笑顔にするかは設定で選べる
+//  - はじめて起動すると設定用の Wi-Fi を出し、画面の QR をスマホで読んで家の Wi-Fi を設定する(StopWatch は設定前から使える)
 //
 // 注意: この機体では土台が回り続けるので、首(ヨー)を「角度指定」で動かす命令(goHome / stop / moveX)は使わない。
 //       それらは原点の角度まで首を回そうとして、脚が勝手に動く。止めるときは出力 0 の連続回転(rotateX(0))にする。
@@ -17,18 +20,25 @@
 #include <WebServer.h>
 #include <WiFi.h>
 
+#include <cmath>
+
+#include "car_control.h"
+#include "espnow_pad.h"
 #include "pages.h"
 
 namespace {
 
-constexpr int SPEED_MIN = 10;  // 速さの下限 [%]
-constexpr int SPEED_MAX = 60;  // 速さの上限 [%]。シミュレーションでは全開だと跳ねて進みが悪い
-constexpr uint32_t COMMAND_TIMEOUT_MS = 900;  // スマホからの合図(0.3 秒ごと)がこの時間途切れたら止める
+constexpr uint32_t COMMAND_TIMEOUT_MS = 900;  // スマホからの値(0.1 秒ごと)がこの時間途切れたら止める
 constexpr uint32_t CONNECT_TIMEOUT_MS = 20000;  // 家の Wi-Fi への接続を待つ時間
 constexpr uint32_t QR_SHOW_MS = 15000;  // 操作ページの QR を出しておく時間
 constexpr uint32_t FORGET_HOLD_MS = 5000;  // 頭の上をこの時間さわり続けると「Wi-Fi の設定を消しますか」を出す
 constexpr uint32_t CONFIRM_SHOW_MS = 10000;  // 確認の画面を出しておく時間。過ぎたら何もせず顔に戻る
-constexpr int PITCH_MAX_DEG = 60;
+constexpr float PITCH_STEP_DEG = 0.5f;  // うなずきは、この角度以上変わったときだけ動かす
+constexpr uint32_t PITCH_INTERVAL_MS = 50;  // うなずきの命令の最短の間隔
+constexpr int PITCH_SPEED = 700;  // movePitch の速さ(0〜1000)
+constexpr uint32_t YAW_READY_MS = 2000;  // 電源を入れてから、首のサーボのモードを切り替えるまで待つ時間
+constexpr uint32_t ATOM_TIMEOUT_MS = 500;  // Atom の値(0.05 秒ごと)がこの時間途切れたら止める
+constexpr uint32_t BUBBLE_MS = 3000;  // StopWatch がつながったときの吹き出しを出しておく時間
 const IPAddress SETUP_IP(192, 168, 4, 1);
 const char* const MDNS_NAME = "strider";
 
@@ -42,41 +52,82 @@ m5avatar::Avatar avatar;
 Mode mode = Mode::Setup;
 String setupSsid;  // 設定用 Wi-Fi の名前
 bool invertDirection = false;
-bool smileWhileWalking = false;  // 歩いている間は笑顔にするか(設定で切り替える。初期状態は変えない)
-int driveDirection = 0;  // +1 前進 / -1 後退 / 0 停止
-int driveSpeed = 35;  // [%]
-uint32_t lastCommandMs = 0;
+bool spinReversed = false;  // 旋回の向きを入れ替える(スティックの右で左へ回るとき用)
+bool smileWhileWalking = false;  // 走っている間は笑顔にするか(設定で切り替える。初期状態は変えない)
+
+// 操作。最後に動かしたほう(スマホか StopWatch)の値を使う
+enum class Source { None, Phone, Atom };
+Source activeSource = Source::None;
+int stickX = 0, stickY = 0;  // -100〜100
+int driveSigned = 0;  // 首の回転の速さ [%]。正 = 前進
+float spinDeg = car::PITCH_MAX_DEG;  // 回るときに頭を上げる角度(小さいほど足が浅く下りる)
+int speedMax = car::SPEED_MAX;  // 速さの上限 [%]
+float pitchTarget = car::LEVEL_DEG;
+float pitchSent = -1.0f;  // 最後に送ったうなずきの角度(-1 = まだ送っていない)
+uint32_t pitchSentMs = 0;
+uint32_t lastPhoneMs = 0;
+String stoppedPress;  // 最後に止めた「ひと押し」の番号。これと同じ番号の値は、離したあとに遅れて届いたものなので捨てる
+espnow_pad::State atomState = espnow_pad::State::Unpaired;
+uint32_t bubbleUntilMs = 0;
 uint32_t restartAtMs = 0;  // 0 以外なら、この時刻に再起動する
 uint32_t qrUntilMs = 0;  // 0 以外なら、この時刻まで QR を表示している
 int qrSecondsShown = -1;  // QR の画面にいま出している残り秒数(-1 = まだ出していない)
 uint32_t confirmUntilMs = 0;  // 0 以外なら、この時刻まで「Wi-Fi の設定を消しますか」を表示している
 bool avatarRunning = false;
+uint32_t pairConfirmUntilMs = 0;  // 0 以外なら、この時刻まで「コントローラーを登録しますか」を表示している
 
-// ---------------------------------------------------------------- 歩行
+// ---------------------------------------------------------------- 走る・回る
 void applyDrive() {
-    if (driveDirection == 0) {
-        M5StackChan.Motion.rotateX(0);
-        return;
-    }
-    const int sign = (invertDirection ? -1 : 1) * driveDirection;
-    M5StackChan.Motion.rotateX(sign * driveSpeed * 10);  // 速さ % → -1000〜1000
+    const int sign = invertDirection ? -1 : 1;
+    M5StackChan.Motion.rotateX(sign * driveSigned * 10);  // 速さ % → -1000〜1000。0 で止まる
 }
 
-// 顔の表情。設定が ON のときだけ、歩いている間を笑顔にする
+// うなずきを目標の角度へ。小さな変化と、短い間隔での連続の命令は送らない(サーボの通信を詰まらせない)
+void updatePitch(uint32_t now, bool force = false) {
+    const float diff = std::fabs(pitchTarget - pitchSent);
+    if (diff < 0.05f) {
+        return;
+    }
+    if (!force && (now - pitchSentMs < PITCH_INTERVAL_MS || (diff < PITCH_STEP_DEG && now - pitchSentMs < 300))) {
+        return;
+    }
+    const float degrees = constrain(pitchTarget, 0.0f, car::PITCH_MAX_DEG);  // 念のためここでも 0〜30° に収める
+    M5StackChan.Motion.movePitch(static_cast<int>(std::lround(degrees * 10)), PITCH_SPEED);  // 角度の単位は 0.1°
+    pitchSent = degrees;
+    pitchSentMs = now;
+}
+
+// 顔の表情。設定が ON のときだけ、走っている間を笑顔にする
 void applyExpression() {
     if (!avatarRunning) {
         return;
     }
-    const bool smile = smileWhileWalking && driveDirection != 0;
+    const bool smile = smileWhileWalking && driveSigned != 0;
     avatar.setExpression(smile ? m5avatar::Expression::Happy : m5avatar::Expression::Neutral);
 }
 
-void setDrive(int direction, int speed) {
-    driveDirection = constrain(direction, -1, 1);
-    driveSpeed = constrain(speed, SPEED_MIN, SPEED_MAX);
-    lastCommandMs = millis();
+// スティックの値から、首の回転の速さとうなずきの目標を決める
+void updateTargets() {
+    const car::PivotCommand command = car::pivotFromStick(stickX, stickY, spinReversed, spinDeg, speedMax);
+    driveSigned = command.drive;
+    pitchTarget = command.pitch;
+}
+
+void setControl(int x, int y, Source source) {
+    stickX = constrain(x, -100, 100);
+    stickY = constrain(y, -100, 100);
+    activeSource = (stickX == 0 && stickY == 0) ? Source::None : source;
+    updateTargets();
     applyDrive();
+    updatePitch(millis());
     applyExpression();
+}
+
+void stopControl() { setControl(0, 0, Source::None); }
+
+// StopWatch のスティックが倒れている間は、スマホからの値を受け付けない
+bool atomIsSteering() {
+    return activeSource == Source::Atom && (abs(stickX) > car::DEAD_ZONE || abs(stickY) > car::DEAD_ZONE);
 }
 
 // ---------------------------------------------------------------- 画面
@@ -88,6 +139,8 @@ void stopAvatar() {
         avatarRunning = false;
         delay(200);
     }
+    // 顔の吹き出し(M5Stack-Avatar の Balloon)は、画面そのものの字の大きさを変えたまま戻さない。顔以外の画面を描く前に戻す
+    M5.Display.setTextSize(1);
 }
 
 void showFace() {
@@ -197,33 +250,104 @@ void showForgetConfirm() {
     confirmUntilMs = millis() + CONFIRM_SHOW_MS;
 }
 
+constexpr uint32_t PAIR_CONFIRM_MS = 20000;
+
+// 近くから申し込んできたコントローラーを登録するか、人に確かめる。展示会などで、ほかの人の機器を取り違えないため
+void showPairConfirm(uint16_t id) {
+    stopAvatar();
+    qrUntilMs = 0;
+    M5.Display.fillScreen(TFT_WHITE);
+    // 16 px の字で 1 行に入るのは全角 19 字ほど(画面の幅 320 px)
+    drawCaption("コントローラーを登録しますか?", 160, 24);
+    char line[24];
+    std::snprintf(line, sizeof(line), "ID %04X", id);
+    drawCaption(line, 160, 56);
+    drawCaption("コントローラーの画面の番号と", 160, 92);
+    drawCaption("同じなら「登録」を押す", 160, 116);
+    const int height = CONFIRM_BUTTON_BOTTOM - CONFIRM_BUTTON_TOP;
+    M5.Display.drawRoundRect(CANCEL_LEFT, CONFIRM_BUTTON_TOP, CANCEL_RIGHT - CANCEL_LEFT, height, 10, TFT_BLACK);
+    M5.Display.fillRoundRect(ERASE_LEFT, CONFIRM_BUTTON_TOP, ERASE_RIGHT - ERASE_LEFT, height, 10, TFT_DARKGREEN);
+    M5.Display.setFont(&fonts::lgfxJapanGothic_24);
+    M5.Display.setTextDatum(textdatum_t::middle_center);
+    M5.Display.setTextColor(TFT_BLACK, TFT_WHITE);
+    M5.Display.drawString("やめる", (CANCEL_LEFT + CANCEL_RIGHT) / 2, (CONFIRM_BUTTON_TOP + CONFIRM_BUTTON_BOTTOM) / 2);
+    M5.Display.setTextColor(TFT_WHITE, TFT_DARKGREEN);
+    M5.Display.drawString("登録", (ERASE_LEFT + ERASE_RIGHT) / 2, (CONFIRM_BUTTON_TOP + CONFIRM_BUTTON_BOTTOM) / 2);
+    pairConfirmUntilMs = millis() + PAIR_CONFIRM_MS;
+}
+
+// 確認の画面を閉じて、いまのモードの画面に戻す
+void restoreScreen() {
+    if (mode == Mode::Setup && atomState != espnow_pad::State::Connected) {
+        if (WiFi.softAPgetStationNum() > 0) {
+            showSetupPageScreen();
+        } else {
+            showSetupJoinScreen();
+        }
+    } else {
+        showFace();
+    }
+}
+
 // ---------------------------------------------------------------- ページと API
 void sendJsonState() {
-    char json[160];
-    snprintf(json, sizeof(json), "{\"dir\":%d,\"speed\":%d,\"invert\":%d,\"smile\":%d,\"volt\":%.2f}", driveDirection,
-             driveSpeed, invertDirection ? 1 : 0, smileWhileWalking ? 1 : 0, M5StackChan.getBatteryVoltage());
+    char json[256];
+    snprintf(json, sizeof(json),
+             "{\"drive\":%d,\"pitch\":%.1f,\"rev\":%d,\"spin\":%.1f,\"vmax\":%d,\"invert\":%d,\"smile\":%d,\"volt\":%.2f,\"atomBusy\":%d,\"atom\":%d}",
+             driveSigned, pitchTarget, spinReversed ? 1 : 0, spinDeg, speedMax, invertDirection ? 1 : 0, smileWhileWalking ? 1 : 0,
+             M5StackChan.getBatteryVoltage(), atomIsSteering() ? 1 : 0, static_cast<int>(atomState));
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", json);
 }
 
-void handleDrive() {
-    setDrive(server.arg("dir").toInt(), server.arg("speed").toInt());
+// スマホのジョイスティック。触れている間は 0.1 秒ごとに来る(止める見張りの合図も兼ねる)
+void handleJoy() {
+    const String press = server.arg("s");
+    if (!press.isEmpty() && press == stoppedPress) {
+        sendJsonState();
+        return;
+    }
+    lastPhoneMs = millis();
+    if (!atomIsSteering()) {
+        setControl(server.arg("x").toInt(), server.arg("y").toInt(), Source::Phone);
+    }
     sendJsonState();
 }
 
+// 止めるのは、どちらが操作していても受け付ける
 void handleStop() {
-    setDrive(0, driveSpeed);
+    if (server.hasArg("s")) {
+        stoppedPress = server.arg("s");
+    }
+    stopControl();
     sendJsonState();
 }
 
-void handlePing() {
-    lastCommandMs = millis();
+// 旋回の角度(spin10 = 角度の 10 倍)、速さの上限(vmax [%])、旋回の向きの入れ替え(rev = 0 / 1)。送られたものだけ変える
+void handleTune() {
+    if (server.hasArg("rev")) {
+        spinReversed = server.arg("rev").toInt() != 0;
+        prefs.putBool("rev", spinReversed);
+    }
+    if (server.hasArg("spin10")) {
+        spinDeg = car::clampSpinPitch(server.arg("spin10").toInt() / 10.0f);
+        prefs.putInt("spin", static_cast<int>(std::lround(spinDeg * 10)));
+    }
+    if (server.hasArg("vmax")) {
+        speedMax = car::clampSpeedMax(server.arg("vmax").toInt());
+        prefs.putInt("vmax", speedMax);
+    }
+    updateTargets();
+    applyDrive();
+    updatePitch(millis(), true);
     sendJsonState();
 }
 
-void handleLook() {
-    const int degrees = constrain(server.arg("pitch").toInt(), 0, PITCH_MAX_DEG);
-    M5StackChan.Motion.movePitch(degrees * 10, 300);  // 角度の単位は 0.1°
+void handleAtomForget() {
+    espnow_pad::forget();
+    if (activeSource == Source::Atom) {
+        stopControl();
+    }
     sendJsonState();
 }
 
@@ -242,7 +366,7 @@ void handleSmile() {
 }
 
 void handleForget() {
-    setDrive(0, driveSpeed);
+    stopControl();
     prefs.remove("ssid");
     prefs.remove("pass");
     server.send(200, "application/json", "{\"ok\":1}");
@@ -290,11 +414,11 @@ void startServer() {
             }
             server.send_P(200, "text/html; charset=utf-8", CONTROL_PAGE);
         });
-        server.on("/api/drive", handleDrive);
+        server.on("/api/joy", handleJoy);
         server.on("/api/stop", handleStop);
-        server.on("/api/ping", handlePing);
         server.on("/api/state", sendJsonState);
-        server.on("/api/look", handleLook);
+        server.on("/api/tune", handleTune);
+        server.on("/api/atom/forget", handleAtomForget);
         server.on("/api/invert", handleInvert);
         server.on("/api/smile", handleSmile);
         server.on("/api/forget", handleForget);
@@ -313,6 +437,12 @@ void startServer() {
 }
 
 // ---------------------------------------------------------------- Wi-Fi
+// StopWatch の ESP-NOW を始める。Wi-Fi の省電力の待ち受けを止めて、受け取りの遅れと取りこぼしを減らす
+void startEspNow() {
+    WiFi.setSleep(false);
+    espnow_pad::begin();
+}
+
 void startSetupMode() {
     mode = Mode::Setup;
     const uint64_t mac = ESP.getEfuseMac();
@@ -323,6 +453,7 @@ void startSetupMode() {
     WiFi.softAPConfig(SETUP_IP, SETUP_IP, IPAddress(255, 255, 255, 0));
     WiFi.softAP(setupSsid.c_str());
     dns.start(53, "*", SETUP_IP);
+    startEspNow();
     startServer();
     showSetupJoinScreen();
 }
@@ -341,6 +472,7 @@ bool connectHomeWifi(const String& ssid, const String& pass) {
 
 void startReadyMode() {
     mode = Mode::Ready;
+    startEspNow();
     MDNS.begin(MDNS_NAME);
     MDNS.addService("http", "tcp", 80);
     startServer();
@@ -355,10 +487,20 @@ void setup() {
     Serial.begin(115200);
     Serial.printf("[strider] board=%d rotation=%d width=%d height=%d\n", static_cast<int>(M5.getBoard()),
                   M5.Display.getRotation(), M5.Display.width(), M5.Display.height());
-    M5StackChan.Motion.rotateX(0);  // 首(ヨー)を連続回転モードにして止めておく
+    // 首(ヨー)を連続回転モードにして止めておく。電源を入れた直後はサーボがまだ応えず、モードの切り替え(初回の rotateX だけで行われる)が
+    // 失敗したまま記録されて、あとで回せなくなる。起動から YAW_READY_MS 待ってから切り替える
+    while (millis() < YAW_READY_MS) {
+        delay(10);
+    }
+    M5StackChan.Motion.rotateX(0);
     prefs.begin("strider", false);
     invertDirection = prefs.getBool("invert", false);
     smileWhileWalking = prefs.getBool("smile", false);
+    spinReversed = prefs.getBool("rev", false);
+    spinDeg = car::clampSpinPitch(prefs.getInt("spin", static_cast<int>(std::lround(car::PITCH_MAX_DEG * 10))) / 10.0f);
+    speedMax = car::clampSpeedMax(prefs.getInt("vmax", car::SPEED_MAX));
+    pitchTarget = car::LEVEL_DEG;
+    updatePitch(millis(), true);  // 起動したら、頭を水平にする(足が上がる)
     const String ssid = prefs.getString("ssid", "");
     if (!ssid.isEmpty() && connectHomeWifi(ssid, prefs.getString("pass", ""))) {
         startReadyMode();
@@ -371,17 +513,82 @@ void setup() {
     }
 }
 
+// StopWatch の値を取り込む。途切れたら、StopWatch が操作していれば止める
+void handleAtom(uint32_t now) {
+    espnow_pad::update(now);
+    if (bubbleUntilMs && now >= bubbleUntilMs) {
+        bubbleUntilMs = 0;
+        if (avatarRunning) {
+            avatar.setSpeechText("");
+        }
+    }
+    uint16_t candidateId = 0;
+    if (!pairConfirmUntilMs && !confirmUntilMs && !restartAtMs && espnow_pad::pairCandidate(candidateId)) {
+        stopControl();
+        showPairConfirm(candidateId);
+    } else if (pairConfirmUntilMs) {
+        const auto touch = M5.Touch.getDetail();
+        const bool inButtonRow = touch.y >= CONFIRM_BUTTON_TOP && touch.y <= CONFIRM_BUTTON_BOTTOM;
+        const bool accept = touch.wasPressed() && inButtonRow && touch.x >= ERASE_LEFT && touch.x <= ERASE_RIGHT;
+        const bool cancel = touch.wasPressed() && inButtonRow && touch.x >= CANCEL_LEFT && touch.x <= CANCEL_RIGHT;
+        const bool expired = static_cast<int32_t>(now - pairConfirmUntilMs) >= 0;
+        if (accept || cancel || expired || !espnow_pad::pairCandidate(candidateId)) {
+            if (accept) {
+                espnow_pad::acceptCandidate();
+            } else {
+                espnow_pad::rejectCandidate(cancel);
+            }
+            pairConfirmUntilMs = 0;
+            restoreScreen();
+        }
+    }
+    const espnow_pad::State state = espnow_pad::state(now);
+    if (state != atomState) {
+        const bool wasConnected = atomState == espnow_pad::State::Connected;
+        atomState = state;
+        const bool busy = pairConfirmUntilMs || confirmUntilMs || restartAtMs;
+        if (state == espnow_pad::State::Connected) {
+            // StopWatch で操作できるなら、スマホ向けの QR(操作ページ・Wi-Fi の設定)は要らない。顔に戻す
+            if (!avatarRunning && !busy) {
+                showFace();
+            }
+            if (avatarRunning) {
+                avatar.setSpeechText("StopWatch OK");
+                bubbleUntilMs = now + BUBBLE_MS;
+            }
+        } else if (wasConnected && mode == Mode::Setup && avatarRunning && !busy) {
+            restoreScreen();  // StopWatch が切れたら、Wi-Fi の設定の画面に戻す
+        }
+    }
+    int x = 0, y = 0;
+    bool stop = false;
+    if (espnow_pad::takeStick(x, y, stop)) {
+        if (stop) {
+            x = y = 0;
+        }
+        const bool centred = abs(x) <= car::DEAD_ZONE && abs(y) <= car::DEAD_ZONE;
+        if (activeSource == Source::Atom || !centred) {
+            setControl(centred ? 0 : x, centred ? 0 : y, Source::Atom);  // 中心に戻したら、ほかの操作に譲る
+        }
+    }
+    if (activeSource == Source::Atom && car::timedOut(now, espnow_pad::lastStickMs(), ATOM_TIMEOUT_MS)) {
+        stopControl();
+    }
+}
+
 void loop() {
     M5StackChan.update();
     server.handleClient();
     const uint32_t now = millis();
+    handleAtom(now);
+    updatePitch(now);
 
     if (mode == Mode::Setup) {
         dns.processNextRequest();
         // スマホが設定用 Wi-Fi につながったら 2 歩目の画面へ、切れたら 1 歩目へ戻す
         static bool phoneJoined = false;
         const bool joined = WiFi.softAPgetStationNum() > 0;
-        if (joined != phoneJoined && !restartAtMs) {
+        if (joined != phoneJoined && !restartAtMs && !pairConfirmUntilMs) {
             phoneJoined = joined;
             if (joined) {
                 showSetupPageScreen();
@@ -390,9 +597,9 @@ void loop() {
             }
         }
     } else {
-        // スマホからの合図が途切れたら止める(電波が切れた、ページを閉じた、など)
-        if (driveDirection != 0 && now - lastCommandMs > COMMAND_TIMEOUT_MS) {
-            setDrive(0, driveSpeed);
+        // スマホからの値が途切れたら止める(電波が切れた、ページを閉じた、など)
+        if (activeSource == Source::Phone && car::timedOut(now, lastPhoneMs, COMMAND_TIMEOUT_MS)) {
+            stopControl();
         }
         if (qrUntilMs && now >= qrUntilMs) {
             showFace();
@@ -414,10 +621,10 @@ void loop() {
                 confirmUntilMs = 0;
                 showFace();
             }
-        } else if (!restartAtMs) {
+        } else if (!restartAtMs && !pairConfirmUntilMs) {
             if (M5StackChan.TouchSensor.pressedFor(FORGET_HOLD_MS) && !holdHandled) {
                 holdHandled = true;
-                setDrive(0, driveSpeed);
+                stopControl();
                 showForgetConfirm();
             } else if (M5StackChan.TouchSensor.wasReleased() && !holdHandled && !qrUntilMs) {
                 showControlQr();

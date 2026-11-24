@@ -124,14 +124,14 @@ ol.do li.current { color: var(--signal); font-weight: 700; }
   <main class="steps">
     <section class="step hero" id="top" data-label="完成">
       <div class="card">
-        <p class="eyebrow">組立ガイド</p>
+        <p class="eyebrow">組立ガイド・吊り下げ版</p>
         <h1>Stackchan <b>Strider</b></h1>
-        <p class="lead">スタックチャンの首振りサーボ1個で歩く、3D プリントの4脚ベース。ネジも接着剤も使わず、はめるだけで組み立てます。</p>
+        <p class="lead">スタックチャンの首振りサーボ1個で歩く、3D プリントの4脚ベース。胴体を脚の間に吊り下げた低い版です。ネジも接着剤も使わず、はめるだけで組み立てます。</p>
         <dl class="facts">
           <div><dt>印刷部品</dt><dd id="fact-parts">37 個</dd></div>
           <div><dt>工具・ネジ</dt><dd>不要</dd></div>
-          <div><dt>印刷時間の目安</dt><dd>5 時間 16 分</dd></div>
-          <div><dt>フィラメント</dt><dd>123 g</dd></div>
+          <div><dt>全高</dt><dd>131 mm</dd></div>
+          <div><dt>印刷時間・使用量</dt><dd>未計測</dd></div>
         </dl>
         <div class="swatches" id="swatches" role="group" aria-label="表示する色"></div>
         <p class="scroll-cue">下へスクロールすると、組み立てが始まります</p>
@@ -142,17 +142,20 @@ ol.do li.current { color: var(--signal); font-weight: 700; }
       <div class="card">
         <p class="eyebrow">準備</p>
         <h2>部品を 3 色に分けて印刷する</h2>
-        <p>印刷データは 3 プレートです。全部サポートなしで、色ごとにフィラメントを替えて刷ります。</p>
+        <p>印刷データは 5 プレートです。全部サポートなしで、色ごとにフィラメントを替えて刷ります。</p>
         <div class="tablewrap">
           <table>
-            <thead><tr><th>プレート</th><th>個数</th><th>使用量</th><th>時間</th></tr></thead>
+            <thead><tr><th>プレート</th><th>個数</th><th>中身</th></tr></thead>
             <tbody>
-              <tr><td>Frame(骨格)</td><td class="num">4</td><td class="num">35.7 g</td><td class="num">1:17</td></tr>
-              <tr><td>Accent(主役)</td><td class="num">13</td><td class="num">67.9 g</td><td class="num">2:46</td></tr>
-              <tr><td>Links(つなぎ)</td><td class="num">40</td><td class="num">19.2 g</td><td class="num">1:05</td></tr>
+              <tr><td>Frame 1(骨格)</td><td class="num">4</td><td>側板 ×2、歯車カバー ×2</td></tr>
+              <tr><td>Frame 2(骨格)</td><td class="num">2</td><td>デッキ、ソケット枠</td></tr>
+              <tr><td>Accent 1(主役)</td><td class="num">13</td><td>三角板 ×8、平歯車 ×2、クランク歯車 ×2、ピニオン</td></tr>
+              <tr><td>Accent 2(主役)</td><td class="num">4</td><td>ヨーク、カウル ×2、ターンテーブル歯車</td></tr>
+              <tr><td>Links(つなぎ)</td><td class="num">40</td><td>リンク ×16、六角シャフト、スリーブ、C クリップ ×22</td></tr>
             </tbody>
           </table>
         </div>
+        <p class="small">使用量と時間は、スライスしてから確かめてください(この版はまだ実機で刷っていません)。</p>
         <p>脚の部品には刻印があります。<strong>数字はリンクの番号、英字はつなぐ場所</strong>です。同じ英字どうしをつなげば組み上がります。</p>
         <dl class="marks">
           <dt>1</dt><dd>両端が C と D</dd>
@@ -167,72 +170,86 @@ ol.do li.current { color: var(--signal); font-weight: 700; }
 
     <section class="step" id="step-1" data-label="手順 1">
       <div class="card">
-        <p class="eyebrow">手順 1 / 8</p>
-        <h2>デッキにピニオンと左の側板を付ける</h2>
+        <p class="eyebrow">手順 1 / 10</p>
+        <h2>左の側板にピニオンとデッキを付ける</h2>
         <ol class="do">
-          <li>ピニオンの歯の側から伸びている長い筒を、側板の丸い穴に内側から通します。</li>
-          <li>デッキの左側の2本のほぞを、側板の角穴に「カチッ」と止まるまで押し込みます。</li>
+          <li>ピニオンの長い筒を、左の側板の<strong>下の</strong>丸い穴に内側から通します。つばが側板の内側に残ります。</li>
+          <li>デッキの左側の2本のツメを、側板の角穴に「カチッ」と止まるまで押し込みます。</li>
         </ol>
         <ul class="parts"><li class="chassis">デッキ <b>×1</b></li><li class="accent">ピニオン <b>×1</b></li><li class="chassis">側板 <b>×1</b></li></ul>
-        <p class="tip">側板は左右とも同じ部品です。<strong>突起(スタッド)が外側</strong>を向くように付けます。</p>
+        <p class="tip">側板は左右とも同じ部品です。<strong>突起が外側</strong>を向くように付けます。上の太い突起(短軸)にクランク歯車がかぶさります。</p>
       </div>
     </section>
 
     <section class="step" id="step-2" data-label="手順 2">
       <div class="card">
-        <p class="eyebrow">手順 2 / 8</p>
-        <h2>右の側板とスリーブを付ける</h2>
-        <ol class="do">
-          <li>右の側板を、デッキの右側のほぞに押し込みます。</li>
-          <li>短いスリーブを、右の側板の丸い穴に外から差し込みます。</li>
-        </ol>
-        <ul class="parts"><li class="chassis">側板 <b>×1</b></li><li class="link">スリーブ <b>×1</b></li></ul>
-      </div>
-    </section>
-
-    <section class="step" id="step-3" data-label="手順 3">
-      <div class="card">
-        <p class="eyebrow">手順 3 / 8</p>
-        <h2>シャフトを通し、クランクを付ける</h2>
-        <ol class="do">
-          <li>六角シャフトを右から差し、スリーブとピニオンに通します。</li>
-          <li>シャフトの両端にクランクを差し込みます。</li>
-        </ol>
-        <ul class="parts"><li class="link">六角シャフト <b>×1</b></li><li class="accent">クランク <b>×2</b></li></ul>
-        <p class="tip"><strong>左右のクランクのピンは、必ず反対向き(180°)</strong>にします。同じ向きだと歩きません。</p>
-      </div>
-    </section>
-
-    <section class="step" id="step-4" data-label="手順 4">
-      <div class="card">
-        <p class="eyebrow">手順 4 / 8</p>
+        <p class="eyebrow">手順 2 / 10</p>
         <h2>ターンテーブル歯車とソケット枠を載せる</h2>
         <ol class="do">
           <li>歯車の歯を下に向け、中央の軸をデッキの丸いボスに落とし込みます。</li>
           <li>ソケット枠の3つのツメを、歯車の円板の角穴に合わせて載せます。</li>
         </ol>
         <ul class="parts"><li class="accent">ターンテーブル歯車 <b>×1</b></li><li class="chassis">ソケット枠 <b>×1</b></li></ul>
-        <p class="tip">円板を手で回して、クランクが一緒に回れば歯車は噛み合っています。</p>
+        <p class="tip">ヨークを付けると歯車は外せなくなります。<strong>この手順はヨークより先</strong>です。</p>
       </div>
     </section>
 
-    <section class="step" id="step-5" data-label="手順 5">
+    <section class="step" id="step-3" data-label="手順 3">
       <div class="card">
-        <p class="eyebrow">手順 5 / 8</p>
-        <h2>ヨークをかぶせる</h2>
-        <p>ヨークを上からかぶせ、側板の4本のツノに「カチッ」と止まるまで押し込みます。輪の内側の返しが、歯車の浮き上がりを押さえます。</p>
+        <p class="eyebrow">手順 3 / 10</p>
+        <h2>ヨークを左の側板に留める</h2>
+        <p>ヨークを上からかぶせ、左側の2本のツメを、左の側板の上の角穴に「カチッ」と止まるまで押し込みます。輪の内側の返しが、歯車の浮き上がりを押さえます。</p>
         <ul class="parts"><li class="accent">ヨーク <b>×1</b></li></ul>
         <p class="tip">左右に立っている丸いパッドが、あとでスタックチャンの頭を挟みます。</p>
       </div>
     </section>
 
-    <section class="step long" id="step-6" data-label="手順 6">
+    <section class="step" id="step-4" data-label="手順 4">
       <div class="card">
-        <p class="eyebrow">手順 6 / 8</p>
+        <p class="eyebrow">手順 4 / 10</p>
+        <h2>右の側板とスリーブを付ける</h2>
+        <ol class="do">
+          <li>スリーブを、右の側板の下の丸い穴に<strong>内側から</strong>通します。つばが内側に残ります。</li>
+          <li>右の側板を、デッキとヨークの右側のツメ(4本)に押し込みます。</li>
+        </ol>
+        <ul class="parts"><li class="chassis">側板 <b>×1</b></li><li class="link">スリーブ <b>×1</b></li></ul>
+        <p class="tip">ターンテーブルを外したくなったら、側板を片方外します。</p>
+      </div>
+    </section>
+
+    <section class="step" id="step-5" data-label="手順 5">
+      <div class="card">
+        <p class="eyebrow">手順 5 / 10</p>
+        <h2>シャフトを通し、平歯車を差す</h2>
+        <ol class="do">
+          <li>六角シャフトを右から差し、スリーブとピニオンに通します。</li>
+          <li>シャフトの両端に平歯車を差します。<strong>くぼみの印がある面を外</strong>に向けます。</li>
+        </ol>
+        <ul class="parts"><li class="link">六角シャフト <b>×1</b></li><li class="accent">平歯車 <b>×2</b></li></ul>
+        <p class="tip">平歯車の印は6つあり、六角のどの向きに差しても真上に1つ来ます。</p>
+      </div>
+    </section>
+
+    <section class="step" id="step-6" data-label="手順 6">
+      <div class="card">
+        <p class="eyebrow">手順 6 / 10</p>
+        <h2>クランク歯車と歯車カバーを付ける</h2>
+        <ol class="do">
+          <li>クランク歯車を、左右の側板の短軸にかぶせます。<strong>平歯車の真上の印と、クランク歯車の印を向かい合わせて</strong>歯を噛ませます。</li>
+          <li>歯車カバーを、側板の前後の2本の突起に通します。クランクの円板が、カバーの丸穴から外に出ます。</li>
+        </ol>
+        <ul class="parts"><li class="accent">クランク歯車 <b>×2</b></li><li class="chassis">歯車カバー <b>×2</b></li></ul>
+        <p class="tip">印を合わせると、右のピンは前、左のピンは後ろの水平になり、<strong>左右が反対向き(180°)</strong>になります。カバーは<strong>座の高いほうを長い突起に</strong>合わせます(右は前、左は後ろ)。カバーは脚のクリップで一緒に留まるので、ここでは載せておくだけです。</p>
+      </div>
+    </section>
+
+    <section class="step long" id="step-7" data-label="手順 7">
+      <div class="card">
+        <p class="eyebrow">手順 7 / 10</p>
         <h2>右側の脚を2本組む</h2>
         <p><strong>先に机の上で</strong>、リンク 4 に三角板を付けた組を4つ作っておきます。リンク 4 の E の突起に上の三角板の E を、G の突起に下の三角板の G を通し、それぞれ突起の溝に C クリップを横からはめます。</p>
-        <ol class="do" id="leg-steps-7">
-          <li>クランクを回して、ピンを<strong>後ろ</strong>へ水平に向けておきます。</li>
+        <ol class="do" id="leg-steps-8">
+          <li>シャフトを回して、右のクランクのピンを<strong>後ろ</strong>へ水平に向けておきます。</li>
           <li>後ろ脚のリンク 3 の B を側板の後ろの突起に、リンク 1 の C をクランクのピンに通します。</li>
           <li>三角板の組を重ねます。上の三角板は B と D に、下の三角板は F に入ります。</li>
           <li>B と D の突起の溝に、C クリップをはめます。</li>
@@ -244,17 +261,17 @@ ol.do li.current { color: var(--signal); font-weight: 700; }
         </ol>
         <ul class="parts"><li class="link">リンク 1〜4 <b>各×2</b></li><li class="accent">三角板 <b>上下各×2</b></li><li class="link">C クリップ <b>×11</b></li></ul>
         <p class="small">いま組んでいる脚の<strong>刻印が光ります</strong>。同じ英字どうしをつなぎます。</p>
-        <p class="tip"><strong>突起も穴も丸いので、向き合わせは要りません。</strong>重ねて、クリップをはめるだけです。前脚は部品が1層ぶん外側に付き、下の三角板は<strong>裏返して</strong>足先の幅広い部分を内側に向けます。</p>
+        <p class="tip"><strong>突起も穴も丸いので、向き合わせは要りません。</strong>重ねて、クリップをはめるだけです。B のクリップが歯車カバーも一緒に留めます。前脚は部品が1層ぶん外側に付き、下の三角板は<strong>裏返して</strong>足先の幅広い部分を内側に向けます。</p>
       </div>
     </section>
 
-    <section class="step long" id="step-7" data-label="手順 7">
+    <section class="step long" id="step-8" data-label="手順 8">
       <div class="card">
-        <p class="eyebrow">手順 7 / 8</p>
+        <p class="eyebrow">手順 8 / 10</p>
         <h2>左側の脚を2本組む</h2>
         <p>右側と同じ要領ですが、<strong>前後が入れ替わります</strong>。左側は前脚から組みます。</p>
-        <ol class="do" id="leg-steps-8">
-          <li>クランクを回して、左のピンを<strong>前</strong>へ水平に向けておきます。</li>
+        <ol class="do" id="leg-steps-9">
+          <li>シャフトを回して、左のクランクのピンを<strong>前</strong>へ水平に向けておきます。</li>
           <li>前脚のリンク 3 の B を側板の前の突起に、リンク 1 の C をクランクのピンに通します。</li>
           <li>三角板の組を重ねます(B・D・F)。</li>
           <li>B と D の突起の溝に、C クリップをはめます。</li>
@@ -269,9 +286,19 @@ ol.do li.current { color: var(--signal); font-weight: 700; }
       </div>
     </section>
 
-    <section class="step" id="step-8" data-label="手順 8">
+    <section class="step" id="step-9" data-label="手順 9">
       <div class="card">
-        <p class="eyebrow">手順 8 / 8</p>
+        <p class="eyebrow">手順 9 / 10</p>
+        <h2>前後のカウルを差し込む</h2>
+        <p>カウルを前と後ろから、デッキの端に差し込みます。上の舌の山が、デッキの溝に「カチッ」と落ちるまで押します。</p>
+        <ul class="parts"><li class="accent">カウル <b>×2</b></li></ul>
+        <p class="tip">カウルは飾りです。付けなくても歩けます。</p>
+      </div>
+    </section>
+
+    <section class="step" id="step-10" data-label="手順 10">
+      <div class="card">
+        <p class="eyebrow">手順 10 / 10</p>
         <h2>スタックチャンを載せる</h2>
         <p>土台をソケット枠のくぼみにはめ、頭を左右のパッドの間に入れます。置くだけで固定は不要です。充電するときは、そのまま持ち上げて外します。</p>
         <ul class="parts"><li class="sc">スタックチャン(M5Stack 製品版)<b>×1</b></li></ul>
@@ -283,7 +310,7 @@ ol.do li.current { color: var(--signal); font-weight: 700; }
       <div class="card">
         <p class="eyebrow">完成</p>
         <h2>首を回すと、歩き出す</h2>
-        <p>首振り(ヨー)のサーボを連続回転させます。頭は回れないので、代わりに土台と歯車が回り、4本の脚が動きます。</p>
+        <p>首振り(ヨー)のサーボを連続回転させます。頭は回れないので、代わりに土台と歯車が回り、4本の脚が動きます。平歯車で回る向きが一度反転するので、<strong>操作ページの「設定 → 前進と後退を入れ替える」にチェック</strong>を入れます。</p>
         <ol class="do">
           <li>ファームウェアを書き込みます(手順はリポジトリの <code>firmware/README.md</code>)。</li>
           <li>画面に出る QR をスマホで読み、家の Wi-Fi を設定します。</li>
@@ -324,12 +351,14 @@ ol.do li.current { color: var(--signal); font-weight: 700; }
     { az: 2.55, pol: 1.27, r: 600, at: [0, 84, 0] },
     { az: 2.45, pol: 1.12, r: 980, at: [0, 150, 0] },
     { az: -2.45, pol: 0.98, r: 400, at: [-6, 66, 0] },
-    { az: 2.45, pol: 0.98, r: 400, at: [6, 66, 0] },
-    { az: 2.2, pol: 1.08, r: 440, at: [0, 62, 0] },
     { az: 2.55, pol: 0.92, r: 450, at: [0, 84, 0] },
-    { az: 2.55, pol: 1.05, r: 500, at: [0, 96, 0] },
-    { az: 1.38, pol: 1.3, r: 400, at: [40, 44, 0] },
-    { az: -1.76, pol: 1.3, r: 400, at: [-40, 44, 0] },
+    { az: -2.45, pol: 1.0, r: 480, at: [-6, 90, 0] },
+    { az: 2.45, pol: 0.98, r: 420, at: [6, 66, 0] },
+    { az: 2.2, pol: 1.15, r: 460, at: [0, 50, 0] },
+    { az: 2.0, pol: 1.1, r: 380, at: [30, 60, 0] },
+    { az: 1.38, pol: 1.3, r: 400, at: [40, 60, 0] },
+    { az: -1.76, pol: 1.3, r: 400, at: [-40, 60, 0] },
+    { az: 2.9, pol: 1.15, r: 560, at: [0, 70, 0] },
     { az: 2.55, pol: 1.2, r: 600, at: [0, 96, 0] },
     { az: 2.55, pol: 1.27, r: 640, at: [0, 84, 0] },
   ];
