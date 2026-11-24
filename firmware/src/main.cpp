@@ -63,6 +63,8 @@ Source activeSource = Source::None;
 int stickX = 0, stickY = 0;  // -100〜100
 int driveSigned = 0;  // 首の回転の速さ [%]。正 = 前進
 float neutralDeg = car::NEUTRAL_CAR500_DEG;  // 直進のうなずきの角度
+float spinDeg = car::PITCH_MAX_DEG;  // 旋回車が回るときに頭を上げる角度(小さいほど足が浅く下りる)
+int speedMax = car::SPEED_MAX;  // 速さの上限 [%]
 float pitchTarget = car::NEUTRAL_CAR500_DEG;
 float pitchSent = -1.0f;  // 最後に送ったうなずきの角度(-1 = まだ送っていない)
 uint32_t pitchSentMs = 0;
@@ -112,11 +114,11 @@ void applyExpression() {
 // スティックの値から、首の回転の速さとうなずきの目標を決める(車の種類で対応が変わる)
 void updateTargets() {
     if (pivotSteer) {
-        const car::PivotCommand command = car::pivotFromStick(stickX, stickY, neutralDeg, steerReversed);
+        const car::PivotCommand command = car::pivotFromStick(stickX, stickY, neutralDeg, steerReversed, spinDeg, speedMax);
         driveSigned = command.drive;
         pitchTarget = command.pitch;
     } else {
-        driveSigned = car::driveFromStick(stickY);
+        driveSigned = car::driveFromStick(stickY, speedMax);
         pitchTarget = car::pitchFromStick(stickX, neutralDeg, steerReversed);
     }
 }
@@ -317,11 +319,11 @@ void sendJsonState() {
         }
     }
     padName[n] = '\0';
-    char json[320];
+    char json[384];
     snprintf(json, sizeof(json),
-             "{\"drive\":%d,\"pitch\":%.1f,\"neutral\":%.1f,\"rev\":%d,\"pivot\":%d,\"invert\":%d,\"smile\":%d,\"volt\":%.2f,\"pad\":%d,"
+             "{\"drive\":%d,\"pitch\":%.1f,\"neutral\":%.1f,\"rev\":%d,\"pivot\":%d,\"spin\":%.1f,\"vmax\":%d,\"invert\":%d,\"smile\":%d,\"volt\":%.2f,\"pad\":%d,"
              "\"padName\":\"%s\",\"padBusy\":%d,\"atom\":%d}",
-             driveSigned, pitchTarget, neutralDeg, steerReversed ? 1 : 0, pivotSteer ? 1 : 0, invertDirection ? 1 : 0, smileWhileWalking ? 1 : 0,
+             driveSigned, pitchTarget, neutralDeg, steerReversed ? 1 : 0, pivotSteer ? 1 : 0, spinDeg, speedMax, invertDirection ? 1 : 0, smileWhileWalking ? 1 : 0,
              M5StackChan.getBatteryVoltage(), padStarted ? static_cast<int>(padState) : 3, padName, padIsSteering() ? 1 : 0,
              static_cast<int>(atomState));
     server.sendHeader("Cache-Control", "no-store");
@@ -362,6 +364,22 @@ void handleNeutral() {
         prefs.putBool("pivot", pivotSteer);
     }
     setNeutral(server.arg("deg10").toInt() / 10.0f);
+    sendJsonState();
+}
+
+// 旋回の角度(spin10 = 角度の 10 倍)と速さの上限(vmax [%])。送られたものだけ変える
+void handleTune() {
+    if (server.hasArg("spin10")) {
+        spinDeg = car::clampSpinPitch(server.arg("spin10").toInt() / 10.0f);
+        prefs.putInt("spin", static_cast<int>(std::lround(spinDeg * 10)));
+    }
+    if (server.hasArg("vmax")) {
+        speedMax = car::clampSpeedMax(server.arg("vmax").toInt());
+        prefs.putInt("vmax", speedMax);
+    }
+    updateTargets();
+    applyDrive();
+    updatePitch(millis(), true);
     sendJsonState();
 }
 
@@ -445,6 +463,7 @@ void startServer() {
         server.on("/api/stop", handleStop);
         server.on("/api/state", sendJsonState);
         server.on("/api/neutral", handleNeutral);
+        server.on("/api/tune", handleTune);
         server.on("/api/pad/forget", handlePadForget);
         server.on("/api/atom/forget", handleAtomForget);
         server.on("/api/invert", handleInvert);
@@ -529,6 +548,8 @@ void setup() {
     smileWhileWalking = prefs.getBool("smile", false);
     steerReversed = prefs.getBool("rev", false);
     pivotSteer = prefs.getBool("pivot", false);
+    spinDeg = car::clampSpinPitch(prefs.getInt("spin", static_cast<int>(std::lround(car::PITCH_MAX_DEG * 10))) / 10.0f);
+    speedMax = car::clampSpeedMax(prefs.getInt("vmax", car::SPEED_MAX));
     neutralDeg = car::clampNeutral(prefs.getInt("neutral", static_cast<int>(std::lround(car::NEUTRAL_CAR500_DEG * 10))) / 10.0f);
     pitchTarget = neutralDeg;
     updatePitch(millis(), true);  // 起動したら、前輪をまっすぐにする

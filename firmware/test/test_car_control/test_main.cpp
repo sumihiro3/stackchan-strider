@@ -134,6 +134,50 @@ void test_pivot_straight_angle_can_be_zero() {
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, car::NEUTRAL_PIVOT_DEG);
 }
 
+void test_drive_uses_the_given_speed_cap() {
+    // 速さの上限は設定で変えられる。省くと今までどおり SPEED_MAX
+    TEST_ASSERT_EQUAL_INT(100, car::driveFromStick(100, 100));
+    TEST_ASSERT_EQUAL_INT(-100, car::driveFromStick(-100, 100));
+    TEST_ASSERT_EQUAL_INT(car::SPEED_MIN, car::driveFromStick(car::DEAD_ZONE + 1, 100));
+    TEST_ASSERT_EQUAL_INT(40, car::driveFromStick(100, 40));
+    TEST_ASSERT_EQUAL_INT(car::SPEED_CAP_MAX, car::driveFromStick(100, 250));  // 範囲外の上限は収める
+}
+
+void test_speed_cap_clamp() {
+    TEST_ASSERT_EQUAL_INT(car::SPEED_CAP_MIN, car::clampSpeedMax(0));
+    TEST_ASSERT_EQUAL_INT(car::SPEED_CAP_MAX, car::clampSpeedMax(150));
+    TEST_ASSERT_EQUAL_INT(80, car::clampSpeedMax(80));
+}
+
+void test_pivot_spin_uses_the_given_pitch() {
+    // 旋回のときに頭を上げる角度は設定で変えられる(足の深さが変わる)。直進の角度は変えない
+    const car::PivotCommand spin = car::pivotFromStick(100, 0, 0.0f, false, 20.0f);
+    TEST_ASSERT_TRUE(spin.spin);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 20.0f, spin.pitch);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, car::pivotFromStick(0, 100, 0.0f, false, 20.0f).pitch);
+}
+
+void test_pivot_spin_pitch_stays_in_range() {
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, car::SPIN_PITCH_MIN_DEG, car::clampSpinPitch(3.0f));
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, car::PITCH_MAX_DEG, car::clampSpinPitch(45.0f));
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 22.5f, car::clampSpinPitch(22.5f));
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, car::PITCH_MAX_DEG, car::pivotFromStick(100, 0, 0.0f, false, 45.0f).pitch);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, car::SPIN_PITCH_MIN_DEG, car::pivotFromStick(100, 0, 0.0f, false, 3.0f).pitch);
+}
+
+void test_pivot_spin_never_lowers_the_head_below_the_straight_angle() {
+    // 直進の角度を旋回の角度より上に調整してあっても、旋回で頭を下げない(下げると足が上がり、旋回できない)
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 18.0f, car::pivotFromStick(100, 0, 18.0f, false, 12.0f).pitch);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 20.0f, car::pivotFromStick(100, 0, 5.0f, false, 20.0f).pitch);
+}
+
+void test_pivot_uses_the_speed_cap_for_both_spin_and_straight() {
+    TEST_ASSERT_EQUAL_INT(100, car::pivotFromStick(100, 0, 0.0f, false, car::PITCH_MAX_DEG, 100).drive);
+    TEST_ASSERT_EQUAL_INT(-100, car::pivotFromStick(-100, 0, 0.0f, false, car::PITCH_MAX_DEG, 100).drive);
+    TEST_ASSERT_EQUAL_INT(100, car::pivotFromStick(0, 100, 0.0f, false, car::PITCH_MAX_DEG, 100).drive);
+    TEST_ASSERT_EQUAL_INT(car::SPEED_MIN, car::pivotFromStick(car::SPIN_THRESHOLD + 1, 0, 0.0f, false, car::PITCH_MAX_DEG, 100).drive);
+}
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_drive_dead_zone_is_stop);
@@ -153,5 +197,11 @@ int main() {
     RUN_TEST(test_pivot_reversed_swaps_the_spin_direction);
     RUN_TEST(test_pivot_never_leaves_limits);
     RUN_TEST(test_pivot_straight_angle_can_be_zero);
+    RUN_TEST(test_drive_uses_the_given_speed_cap);
+    RUN_TEST(test_speed_cap_clamp);
+    RUN_TEST(test_pivot_spin_uses_the_given_pitch);
+    RUN_TEST(test_pivot_spin_pitch_stays_in_range);
+    RUN_TEST(test_pivot_spin_never_lowers_the_head_below_the_straight_angle);
+    RUN_TEST(test_pivot_uses_the_speed_cap_for_both_spin_and_straight);
     return UNITY_END();
 }

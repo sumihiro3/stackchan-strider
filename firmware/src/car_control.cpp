@@ -9,14 +9,15 @@ float clampFloat(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? h
 
 }  // namespace
 
-int driveFromStick(int y) {
+int driveFromStick(int y, int speedMax) {
     y = clampStick(y);
+    speedMax = clampSpeedMax(speedMax);
     const int magnitude = y < 0 ? -y : y;
     if (magnitude <= DEAD_ZONE) {
         return 0;
     }
-    // 不感帯の外側を、SPEED_MIN〜SPEED_MAX へ直線で割り当てる
-    const int speed = SPEED_MIN + (magnitude - DEAD_ZONE - 1) * (SPEED_MAX - SPEED_MIN) / (100 - DEAD_ZONE - 1);
+    // 不感帯の外側を、SPEED_MIN〜speedMax へ直線で割り当てる
+    const int speed = SPEED_MIN + (magnitude - DEAD_ZONE - 1) * (speedMax - SPEED_MIN) / (100 - DEAD_ZONE - 1);
     return y < 0 ? -speed : speed;
 }
 
@@ -35,19 +36,26 @@ float pitchFromStick(int x, float neutral, bool reversed) {
     return clampFloat(pitch, 0.0f, PITCH_MAX_DEG);
 }
 
-PivotCommand pivotFromStick(int x, int y, float straight, bool reversed) {
+PivotCommand pivotFromStick(int x, int y, float straight, bool reversed, float spinPitch, int speedMax) {
     x = clampStick(reversed ? -x : x);
     straight = clampFloat(straight, 0.0f, PITCH_MAX_DEG);
+    speedMax = clampSpeedMax(speedMax);
     const int magnitude = x < 0 ? -x : x;
     if (magnitude <= SPIN_THRESHOLD) {
-        return {driveFromStick(y), straight, false};
+        return {driveFromStick(y, speedMax), straight, false};
     }
-    // しきい値の外側を、SPEED_MIN〜SPEED_MAX へ直線で割り当てる
-    const int speed = SPEED_MIN + (magnitude - SPIN_THRESHOLD - 1) * (SPEED_MAX - SPEED_MIN) / (100 - SPIN_THRESHOLD - 1);
-    return {x < 0 ? -speed : speed, PITCH_MAX_DEG, true};
+    // しきい値の外側を、SPEED_MIN〜speedMax へ直線で割り当てる
+    const int speed = SPEED_MIN + (magnitude - SPIN_THRESHOLD - 1) * (speedMax - SPEED_MIN) / (100 - SPIN_THRESHOLD - 1);
+    // 直進の角度のほうが上に調整してあるときは、頭を下げない
+    const float pitch = clampSpinPitch(spinPitch);
+    return {x < 0 ? -speed : speed, pitch > straight ? pitch : straight, true};
 }
 
 float clampNeutral(float neutral) { return clampFloat(neutral, NEUTRAL_MIN_DEG, NEUTRAL_MAX_DEG); }
+
+float clampSpinPitch(float degrees) { return clampFloat(degrees, SPIN_PITCH_MIN_DEG, PITCH_MAX_DEG); }
+
+int clampSpeedMax(int percent) { return percent < SPEED_CAP_MIN ? SPEED_CAP_MIN : (percent > SPEED_CAP_MAX ? SPEED_CAP_MAX : percent); }
 
 bool timedOut(uint32_t now, uint32_t since, uint32_t limitMs) {
     return static_cast<int32_t>(now - since) > static_cast<int32_t>(limitMs);
