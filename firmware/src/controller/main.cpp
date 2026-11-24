@@ -4,6 +4,7 @@
 #include <Preferences.h>
 #include <WiFi.h>
 #include <esp_now.h>
+#include <esp_system.h>
 #include <esp_wifi.h>
 
 #include <algorithm>
@@ -152,6 +153,12 @@ void setup() {
     Serial.begin(115200);
     auto cfg = M5.config();
     M5.begin(cfg);
+    // 電源ボタンで電源を入れた起動では、画面(CO5300)の初期化が効かず黒いままになる(タッチと送信は動く)。
+    // CPU だけのリセットなら毎回映るので、電源を入れたときは 1 回だけ再起動する。電源は M5PM1 が保持しているので落ちない(2026-11-24 実機)
+    if (esp_reset_reason() == ESP_RST_POWERON) {
+        delay(100);
+        esp_restart();
+    }
     if (M5.Display.width() > 200) {
         canvas.setColorDepth(8);  // 466×466 を 16 bit で持つと 430 KB になる。8 bit で十分
         canvas.setPsram(true);
