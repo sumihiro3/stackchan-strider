@@ -3,7 +3,7 @@
   {
    "key": "rail_R",
    "label": "右の側板(前に補助輪、足の腕の軸の穴)",
-   "color": "gray",
+   "color": "red",
    "count": 1,
    "size_mm": [
     84.5,
@@ -21,7 +21,7 @@
   {
    "key": "rail_L",
    "label": "左の側板(後ろに補助輪)",
-   "color": "gray",
+   "color": "red",
    "count": 1,
    "size_mm": [
     59.9,
@@ -39,7 +39,7 @@
   {
    "key": "yoke",
    "label": "ヨーク(walker と同じ)",
-   "color": "gray",
+   "color": "red",
    "count": 1,
    "size_mm": [
     106.8,
@@ -111,7 +111,7 @@
   {
    "key": "lever_R",
    "label": "頭の右のレバー",
-   "color": "red",
+   "color": "gray",
    "count": 1,
    "size_mm": [
     49.0,
@@ -129,7 +129,7 @@
   {
    "key": "link",
    "label": "押し板",
-   "color": "red",
+   "color": "gray",
    "count": 1,
    "size_mm": [
     29.5,
@@ -147,7 +147,7 @@
   {
    "key": "foot",
    "label": "足の腕(軸つき)",
-   "color": "red",
+   "color": "gray",
    "count": 1,
    "size_mm": [
     68.5,
@@ -165,7 +165,7 @@
   {
    "key": "deck",
    "label": "デッキ(walker と同じ)",
-   "color": "gray",
+   "color": "red",
    "count": 1,
    "size_mm": [
     106.8,
@@ -183,7 +183,7 @@
   {
    "key": "gear_table",
    "label": "ターンテーブル歯車(walker と同じ)",
-   "color": "gray",
+   "color": "red",
    "count": 1,
    "size_mm": [
     82.0,
@@ -201,7 +201,7 @@
   {
    "key": "socket_frame",
    "label": "ソケット枠(walker と同じ)",
-   "color": "gray",
+   "color": "red",
    "count": 1,
    "size_mm": [
     82.0,
@@ -219,7 +219,7 @@
   {
    "key": "pinion",
    "label": "ピニオン(walker と同じ)",
-   "color": "gray",
+   "color": "red",
    "count": 1,
    "size_mm": [
     42.5,
@@ -237,7 +237,7 @@
   {
    "key": "sleeve",
    "label": "スリーブ(walker と同じ)",
-   "color": "gray",
+   "color": "red",
    "count": 1,
    "size_mm": [
     18.0,
@@ -255,7 +255,7 @@
   {
    "key": "clip",
    "label": "C クリップ(walker と同じ)",
-   "color": "gray",
+   "color": "red",
    "count": 5,
    "size_mm": [
     9.0,
@@ -277,6 +277,18 @@
    "name": "Gray #9a9a96",
    "color": "gray",
    "support": false,
+   "parts": 3,
+   "contents": {
+    "foot": 1,
+    "link": 1,
+    "lever_R": 1
+   }
+  },
+  {
+   "plate": 2,
+   "name": "Red #c8372d",
+   "color": "red",
+   "support": false,
    "parts": 13,
    "contents": {
     "deck": 1,
@@ -288,18 +300,6 @@
     "pinion": 1,
     "sleeve": 1,
     "clip": 5
-   }
-  },
-  {
-   "plate": 2,
-   "name": "Red #c8372d",
-   "color": "red",
-   "support": false,
-   "parts": 3,
-   "contents": {
-    "foot": 1,
-    "link": 1,
-    "lever_R": 1
    }
   },
   {
