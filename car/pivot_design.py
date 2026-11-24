@@ -17,6 +17,7 @@
 """
 from __future__ import annotations
 
+import dataclasses
 import math
 from functools import lru_cache
 
@@ -324,7 +325,10 @@ def part_defs() -> dict[str, PartDef]:
     for key in REUSED + SC_PARTS:
         out[key] = base_defs[key]
     out["clip"] = PartDef("clip", base_defs["clip"].label, base_defs["clip"].build, base_defs["clip"].color, CLIPS)
-    return out
+    # 色は「車体が赤、動く所(レバー・押し板・足)がグレー、車輪が黒」(2026-11-24 ユーザーが決めた)。
+    # 流用する部品はもとの色(車体 = グレー、動く所 = 赤)で定義されているので、ここで赤とグレーを入れ替える
+    swap = {COLORS["gray"]: COLORS["red"], COLORS["red"]: COLORS["gray"]}
+    return {k: dataclasses.replace(v, color=swap.get(v.color, v.color)) if v.printable else v for k, v in out.items()}
 
 
 def instances(drive: float = 0.0, head_pitch: float | None = None, with_stackchan: bool = True) -> list[Instance]:
