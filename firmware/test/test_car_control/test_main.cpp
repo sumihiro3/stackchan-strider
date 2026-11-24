@@ -129,7 +129,7 @@ void test_pivot_never_leaves_limits() {
 }
 
 void test_pivot_straight_angle_can_be_zero() {
-    // 旋回車は頭が水平(0°)で直進する。直進の角度として 0° を保存できること
+    // ピボットは頭が水平(0°)で直進する。直進の角度として 0° を保存できること
     TEST_ASSERT_FLOAT_WITHIN(0.01f, car::NEUTRAL_PIVOT_DEG, car::clampNeutral(car::NEUTRAL_PIVOT_DEG));
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, car::NEUTRAL_PIVOT_DEG);
 }

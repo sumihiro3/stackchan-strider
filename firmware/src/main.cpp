@@ -53,8 +53,8 @@ m5avatar::Avatar avatar;
 Mode mode = Mode::Setup;
 String setupSsid;  // 設定用 Wi-Fi の名前
 bool invertDirection = false;
-bool steerReversed = false;  // 後輪でかじを取る車(トライク)では、スティックの左右とうなずきの向きを逆にする。旋回車では旋回の向きを逆にする
-bool pivotSteer = false;  // 旋回車(頭を上げると足が下りて旋回する)。スティックの左右は、かじではなく旋回になる
+bool steerReversed = false;  // 後輪でかじを取る車(トライク)では、スティックの左右とうなずきの向きを逆にする。ピボットでは旋回の向きを逆にする
+bool pivotSteer = false;  // ピボット(頭を上げると足が下りて旋回する)。スティックの左右は、かじではなく旋回になる
 bool smileWhileWalking = false;  // 走っている間は笑顔にするか(設定で切り替える。初期状態は変えない)
 
 // 操作。最後に動かしたほう(スマホかパッド)の値を使う
@@ -63,7 +63,7 @@ Source activeSource = Source::None;
 int stickX = 0, stickY = 0;  // -100〜100
 int driveSigned = 0;  // 首の回転の速さ [%]。正 = 前進
 float neutralDeg = car::NEUTRAL_CAR500_DEG;  // 直進のうなずきの角度
-float spinDeg = car::PITCH_MAX_DEG;  // 旋回車が回るときに頭を上げる角度(小さいほど足が浅く下りる)
+float spinDeg = car::PITCH_MAX_DEG;  // ピボットが回るときに頭を上げる角度(小さいほど足が浅く下りる)
 int speedMax = car::SPEED_MAX;  // 速さの上限 [%]
 float pitchTarget = car::NEUTRAL_CAR500_DEG;
 float pitchSent = -1.0f;  // 最後に送ったうなずきの角度(-1 = まだ送っていない)

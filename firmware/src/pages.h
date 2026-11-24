@@ -58,7 +58,7 @@ details .card{margin-top:10px}
   <span style="right:3%;top:50%;transform:translateY(-50%)">右</span>
   <div class="knob" id="knob"></div>
 </div>
-<p class="note" style="text-align:center">指でつまみを動かします。上下で進む・下がる(倒すほど速い)、左右でかじを切ります(旋回車は、大きく倒すとその場で回ります)。離すと止まります。</p>
+<p class="note" style="text-align:center">指でつまみを動かします。上下で進む・下がる(倒すほど速い)、左右でかじを切ります(ピボットは、大きく倒すとその場で回ります)。離すと止まります。</p>
 <div class="grow"></div>
 <details>
   <summary>設定</summary>
@@ -68,12 +68,12 @@ details .card{margin-top:10px}
       <button data-deg10="126" data-rev="0" data-pivot="0">car500</button>
       <button data-deg10="130" data-rev="0" data-pivot="0">レトロカー</button>
       <button data-deg10="150" data-rev="1" data-pivot="0">トライク</button>
-      <button data-deg10="0" data-rev="0" data-pivot="1">旋回車</button>
+      <button data-deg10="0" data-rev="0" data-pivot="1">ピボット</button>
     </div>
     <h2>まっすぐ走らないときの微調整</h2>
     <div class="step"><button id="trim-l">← 左へ</button><output id="neutral-out"></output><button id="trim-r">右へ →</button></div>
-    <p class="note">まっすぐ進めたときに左へ曲がるなら「右へ」、右へ曲がるなら「左へ」を押します。本体に保存されます。旋回車では、まっすぐ走るときの頭の角度が変わります(「右へ」で頭が上がり、足が地面に近づきます)。</p>
-    <h2>旋回車: 回るときに頭を上げる角度</h2>
+    <p class="note">まっすぐ進めたときに左へ曲がるなら「右へ」、右へ曲がるなら「左へ」を押します。本体に保存されます。ピボットでは、まっすぐ走るときの頭の角度が変わります(「右へ」で頭が上がり、足が地面に近づきます)。</p>
+    <h2>ピボット: 回るときに頭を上げる角度</h2>
     <div class="step"><button id="spin-d">← 浅く</button><output id="spin-out"></output><button id="spin-u">深く →</button></div>
     <p class="note">角度が大きいほど足が深く下り、右の駆動輪が高く浮きます。回りが悪いときは、1° ずつ変えていちばん回る所を探します(足が地面に届くのは約 12°)。本体に保存されます。</p>
     <h2>速さの上限</h2>

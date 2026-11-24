@@ -1,4 +1,4 @@
-"""旋回車(pivot)の組立ガイド(スクロールに合わせて部品が付いていく 3D のページ)を書き出す。
+"""ピボット(pivot)の組立ガイド(スクロールに合わせて部品が付いていく 3D のページ)を書き出す。
 
 使い方: python car/export_guide_pivot.py
 出力: docs_pivot/guide.html(ダブルクリックで開ける単体ファイル。three.js は CDN から読み込む)
