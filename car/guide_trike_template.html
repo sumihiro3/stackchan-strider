@@ -147,36 +147,38 @@ a { color: var(--signal); }
     <section class="step" id="step-1" data-label="手順 1">
       <div class="card">
         <p class="eyebrow">手順 1 / 12</p>
-        <h2>左の側板にピニオンとデッキを付ける</h2>
+        <h2>デッキにターンテーブル歯車とソケット枠を載せる</h2>
         <ol class="do">
-          <li>ピニオンの長い筒を、左の側板の<strong>下の</strong>丸い穴に内側から通します。つばが側板の内側に残ります。</li>
-          <li>デッキの左側の 2 本のツメを、側板の角穴に「カチッ」と止まるまで押し込みます。</li>
+          <li>デッキを机に置きます。<strong>まだ側板には付けません。</strong></li>
+          <li>歯車の歯を下に向け、中央の軸をデッキの丸いボスに落とし込みます。</li>
+          <li>ソケット枠の 3 つのツメを、歯車の円板の角穴に合わせて載せます。</li>
         </ol>
-        <ul class="parts"><li class="gray">ピニオン <b>×1</b></li><li class="gray">左の側板 <b>×1</b></li><li class="gray">デッキ <b>×1</b></li></ul>
-        <p class="tip">側板は左右で形が違います。後ろへ腕が伸び、前の外側に補助輪のピンが立つ向きで使います。</p>
+        <ul class="parts"><li class="gray">デッキ <b>×1</b></li><li class="gray">ターンテーブル歯車 <b>×1</b></li><li class="gray">ソケット枠 <b>×1</b></li></ul>
       </div>
     </section>
 
     <section class="step" id="step-2" data-label="手順 2">
       <div class="card">
         <p class="eyebrow">手順 2 / 12</p>
-        <h2>ターンテーブル歯車とソケット枠を載せる</h2>
-        <ol class="do">
-          <li>歯車の歯を下に向け、中央の軸をデッキの丸いボスに落とし込みます。</li>
-          <li>ソケット枠の 3 つのツメを、歯車の円板の角穴に合わせて載せます。</li>
-        </ol>
-        <ul class="parts"><li class="gray">ターンテーブル歯車 <b>×1</b></li><li class="gray">ソケット枠 <b>×1</b></li></ul>
-        <p class="tip">ヨークを付けると歯車は外せなくなります。<strong>この手順はヨークより先</strong>です。</p>
+        <h2>ヨークをかぶせる(まだ留めない)</h2>
+        <p>ヨークを上からかぶせます。輪の内側の返しが、歯車の浮き上がりを押さえます。左右のツメは、次の手順で側板に留めます。それまでは手で押さえておきます。</p>
+        <ul class="parts"><li class="gray">ヨーク <b>×1</b></li></ul>
+        <p class="tip">左右に立っている丸いパッドが、あとでスタックチャンの頭を挟みます。</p>
       </div>
     </section>
 
     <section class="step" id="step-3" data-label="手順 3">
       <div class="card">
         <p class="eyebrow">手順 3 / 12</p>
-        <h2>ヨークを左の側板に留める</h2>
-        <p>ヨークを上からかぶせ、左側の 2 本のツメを、左の側板の上の角穴に「カチッ」と止まるまで押し込みます。輪の内側の返しが、歯車の浮き上がりを押さえます。</p>
-        <ul class="parts"><li class="gray">ヨーク <b>×1</b></li></ul>
-        <p class="tip">左右に立っている丸いパッドが、あとでスタックチャンの頭を挟みます。</p>
+        <h2>ピニオンを入れ、左の側板でまとめて留める</h2>
+        <ol class="do">
+          <li>ピニオンを、デッキの<strong>下から</strong>入れます。歯が歯車の歯にかみ合い、長い筒が左へ向きます。</li>
+          <li>左の側板の<strong>下の</strong>丸い穴を、ピニオンの筒に通します。</li>
+          <li>デッキの 2 本とヨークの 2 本、左側の 4 本のツメを、側板の角穴に「カチッ」と止まるまで<strong>一緒に</strong>押し込みます。</li>
+        </ol>
+        <ul class="parts"><li class="gray">ピニオン <b>×1</b></li><li class="gray">左の側板 <b>×1</b></li></ul>
+        <p class="tip"><strong>デッキだけを先に側板へ留めると、ヨークを付けられません。</strong>ヨークのツメが側板の角穴に入らなくなります。デッキとヨークは、左の側板にまとめて留めます。</p>
+        <p class="tip">側板は左右で形が違います。後ろへ腕が伸び、前の外側に補助輪のピンが立つ向きで使います。ピニオンは歯車とかみ合うので、横からは入りません。</p>
       </div>
     </section>
 
@@ -332,9 +334,9 @@ a { color: var(--signal); }
   const CAMERAS = [
     { az: 2.5, pol: 1.2, r: 600, at: [0, 70, 0] },
     { az: 2.45, pol: 1.08, r: 940, at: [0, 150, 0] },
-    { az: -2.35, pol: 1.0, r: 320, at: [-10, 40, -5] },
     { az: 2.5, pol: 0.9, r: 320, at: [0, 55, 0] },
     { az: -2.4, pol: 0.95, r: 360, at: [0, 65, 0] },
+    { az: -2.2, pol: 1.3, r: 440, at: [-30, 35, 0] },
     { az: 2.15, pol: 1.0, r: 400, at: [15, 40, 0] },
     { az: 2.0, pol: 1.1, r: 520, at: [0, 35, 0] },
     { az: 2.3, pol: 1.05, r: 420, at: [0, 25, -25] },

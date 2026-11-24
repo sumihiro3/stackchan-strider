@@ -28,7 +28,7 @@ FRAMES = 60  # 走っている姿のコマ数(車軸 1 回転)
 STEER_SWING_DEG = 11.0  # 走っている姿で、うなずきを直進の角度から前後に振る幅
 
 # 手順の番号(ページの section の順。0 = 完成、1 = 部品)
-(S_FRAME_LEFT, S_TABLE, S_YOKE, S_FRAME_RIGHT, S_DRIVE_WHEELS, S_AUX, S_BRIDGE, S_FORK, S_COINS, S_LEVER, S_STACKCHAN,
+(S_TABLE, S_YOKE, S_FRAME_LEFT, S_FRAME_RIGHT, S_DRIVE_WHEELS, S_AUX, S_BRIDGE, S_FORK, S_COINS, S_LEVER, S_STACKCHAN,
  S_LINK) = range(2, 14)
 SC_HOVER = 150.0  # レバーを差す間、スタックチャンを浮かせておく高さ [mm]
 FORK_HOVER = -55.0  # 後輪を付ける間、フォークを橋の下に置いておく高さ [mm]
@@ -49,13 +49,15 @@ def _hover(step: int, start: float, origin, at) -> tuple:
 _SC = (0.0, 0.0, SC_HOVER)
 _FORK = (0.0, 0.0, FORK_HOVER)
 MOVES: dict[str, list] = {
-    # 駆動部(walker の吊り下げ版と同じ順。ヨークが横向きのツメで側板に留まるので、右の側板より先に付ける)
-    "pinion": _one(S_FRAME_LEFT, 0, 3, (70, 0, 0)),
-    "rail_L": _one(S_FRAME_LEFT, 1, 3, (-75, 0, 0)),
-    "deck": _one(S_FRAME_LEFT, 2, 3, (45, 0, 0)),
-    "gear_table": _one(S_TABLE, 0, 2, (0, 0, 85)),
-    "socket_frame": _one(S_TABLE, 1, 2, (0, 0, 85)),
-    "yoke": _one(S_YOKE, 0, 1, (45, 0, 60)),
+    # 駆動部: デッキに歯車・ソケット枠・ヨークを重ねてから、左の側板でまとめて留める。
+    # デッキだけを先に側板へ留めると、ヨークの左のツメを側板の角穴へ入れられない(実物、2026-11-24)。
+    # ピニオンは歯車とかみ合うので横からは入らない。デッキの下から入れる(計算で、下からなら当たらない)
+    "deck": _one(S_TABLE, 0, 3, (0, 0, 60)),
+    "gear_table": _one(S_TABLE, 1, 3, (0, 0, 85)),
+    "socket_frame": _one(S_TABLE, 2, 3, (0, 0, 85)),
+    "yoke": _one(S_YOKE, 0, 1, (0, 0, 60)),
+    "pinion": _one(S_FRAME_LEFT, 0, 2, (0, 0, -60)),
+    "rail_L": _one(S_FRAME_LEFT, 1, 2, (-75, 0, 0)),
     "sleeve": _one(S_FRAME_RIGHT, 0, 2, (120, 0, 0)),
     "rail_R": _one(S_FRAME_RIGHT, 1, 2, (75, 0, 0)),
     # 駆動輪: 右はシャフトと一体で、右から通す。左は六角に押し込む
