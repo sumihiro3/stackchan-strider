@@ -113,11 +113,11 @@ a { color: var(--signal); }
       <div class="card">
         <p class="eyebrow">組立ガイド・ピボット</p>
         <h1>Stackchan <b>Pivot</b></h1>
-        <p class="lead">2 つの駆動輪でまっすぐ走り、頭を上げるとその場で回る、3D プリントの車です。スタックチャンが首を振ると駆動輪が回ります。頭を上げると、頭の横のレバーが赤い押し板を押し下げ、足が地面に着いて右の駆動輪が浮きます。左の駆動輪だけが地面を押すので、足を軸に回ります。ネジも接着剤も使わず、はめるだけで組み立てます。</p>
+        <p class="lead">2 つの駆動輪でまっすぐ走り、頭を上げるとその場で回る、3D プリントの車です。スタックチャンが首を振ると駆動輪が回ります。頭を上げると、頭の横のレバーが押し板を押し下げ、車体の下の二股の足が地面に着いて右の駆動輪が浮きます。左の駆動輪だけが地面を押すので、車体のほぼ真ん中を軸に回ります。ネジも接着剤も使わず、はめるだけで組み立てます。</p>
         <dl class="facts">
           <div><dt>印刷部品</dt><dd id="fact-parts">— 個</dd></div>
           <div><dt>工具・ネジ</dt><dd>不要</dd></div>
-          <div><dt>全長 × 全幅</dt><dd>99 × 139 mm</dd></div>
+          <div><dt>全長 × 全幅</dt><dd>99 × 120 mm</dd></div>
           <div><dt>ほかに要るもの</dt><dd>LEGO Technic のピン 2 本</dd></div>
         </dl>
         <p class="scroll-cue">下へスクロールすると、組み立てが始まります</p>
@@ -133,35 +133,20 @@ a { color: var(--signal); }
           <table>
             <thead><tr><th>プレート</th><th>中身</th></tr></thead>
             <tbody>
-              <tr><td>Gray</td><td>左右の側板、デッキ、ターンテーブル歯車、ソケット枠、ピニオン、スリーブ、ヨーク、C クリップ ×5</td></tr>
-              <tr><td>Red</td><td>足の腕、押し板、頭のレバー</td></tr>
-              <tr><td>Black</td><td>右の駆動輪(シャフトと一体)、左の駆動輪(六角穴)、補助輪 ×2</td></tr>
+              <tr><td>Gray</td><td>頭のレバー、押し板、足の腕、二股の足、軸の棒</td></tr>
+              <tr><td>Red</td><td>左右の側板、デッキ、ターンテーブル歯車、ソケット枠、ピニオン、スリーブ ×2、六角シャフト、ヨーク、C クリップ ×6</td></tr>
+              <tr><td>Black</td><td>駆動輪 ×2(左右同じ)、補助輪 ×2</td></tr>
             </tbody>
           </table>
         </div>
         <p>ほかに、LEGO Technic のピン(摩擦つき、2 ポッチの長さ)を 2 本用意します。</p>
-        <p class="tip"><strong>1 色で刷るなら</strong> <code>print_pivot/stackchan_pivot_1color.3mf</code> を使います。1 枚目がピボットだけの部品(左右の側板、足の腕、押し板、頭のレバー、C クリップ)、2 枚目が駆動部などの部品です。</p>
+        <p class="tip"><strong>1 色で刷るなら</strong> <code>print_pivot/stackchan_pivot_1color.3mf</code> を使います。1 枚目がピボットだけの部品(左右の側板、足の腕、二股の足、軸の棒、押し板、頭のレバー、C クリップ)、2 枚目が駆動部と車輪です。</p>
       </div>
     </section>
 
     <section class="step" id="step-1" data-label="手順 1">
       <div class="card">
         <p class="eyebrow">手順 1 / 10</p>
-        <h2>右の側板に、足の腕を付ける</h2>
-        <ol class="do">
-          <li>右の側板は、補助輪のピンが<strong>前の外側</strong>に立っているほうです。車軸の大きい穴の前の下に、外へ短い筒が出た小さい丸い穴があります。</li>
-          <li>足の腕の軸を、その穴に<strong>内側から</strong>通します。</li>
-          <li>外へ出た軸の先の溝に、C クリップをはめます。</li>
-        </ol>
-        <ul class="parts"><li class="red">右の側板 <b>×1</b></li><li class="gray">足の腕 <b>×1</b></li><li class="red">C クリップ <b>×1</b></li></ul>
-        <p class="tip"><strong>この手順は必ず最初です。</strong>側板を車体に付けたあとでは、足の腕はピニオンに当たって入りません。</p>
-        <p class="tip">足の腕の向き: 腕は後ろへ伸び、丸い足が下、ピンの付いた端が後ろに来ます。ピンは外を向きます。軸で自由に回れば合っています。</p>
-      </div>
-    </section>
-
-    <section class="step" id="step-2" data-label="手順 2">
-      <div class="card">
-        <p class="eyebrow">手順 2 / 10</p>
         <h2>デッキにターンテーブル歯車とソケット枠を載せる</h2>
         <ol class="do">
           <li>デッキを机に置きます。<strong>まだ側板には付けません。</strong></li>
@@ -169,72 +154,89 @@ a { color: var(--signal); }
           <li>ソケット枠の 3 つのツメを、歯車の円板の角穴に合わせて載せます。</li>
         </ol>
         <ul class="parts"><li class="red">デッキ <b>×1</b></li><li class="red">ターンテーブル歯車 <b>×1</b></li><li class="red">ソケット枠 <b>×1</b></li></ul>
+        <p class="tip">デッキの左右には、駆動輪が通る大きな切り欠きがあります。</p>
+      </div>
+    </section>
+
+    <section class="step" id="step-2" data-label="手順 2">
+      <div class="card">
+        <p class="eyebrow">手順 2 / 10</p>
+        <h2>ヨークをかぶせる(まだ留めない)</h2>
+        <p>ヨークを上からかぶせます。輪の内側の返しが、歯車の浮き上がりを押さえます。左右のツメは、手順 4 と 5 で側板に留めます。それまでは手で押さえておきます。</p>
+        <ul class="parts"><li class="red">ヨーク <b>×1</b></li></ul>
+        <p class="tip">左右に立っている丸い板(耳)が、あとでスタックチャンの頭を挟みます。右の耳には、手順 9 でレバーの輪を掛けます。</p>
       </div>
     </section>
 
     <section class="step" id="step-3" data-label="手順 3">
       <div class="card">
         <p class="eyebrow">手順 3 / 10</p>
-        <h2>ヨークをかぶせる(まだ留めない)</h2>
-        <p>ヨークを上からかぶせます。輪の内側の返しが、歯車の浮き上がりを押さえます。左右のツメは、次の手順で側板に留めます。それまでは手で押さえておきます。</p>
-        <ul class="parts"><li class="red">ヨーク <b>×1</b></li></ul>
-        <p class="tip">左右に立っている丸い板(耳)が、あとでスタックチャンの頭を挟みます。右の耳には、手順 9 でレバーの輪を掛けます。</p>
+        <h2>車軸を組み、デッキの下から入れる</h2>
+        <ol class="do">
+          <li>六角シャフトに、ピニオンを通します。歯のある側が右です。</li>
+          <li>駆動輪を左右から 1 個ずつ押し込みます。皿のくぼんだ面が外です。内側の筒(ハブ)がピニオンに当たるまで押します。</li>
+          <li>スリーブを左右の端に通します。つばが外です。</li>
+          <li>組んだ車軸を、デッキの<strong>下から</strong>持ち上げます。駆動輪はデッキの切り欠きを通り、ピニオンの歯が歯車の歯にかみ合います。</li>
+        </ol>
+        <ul class="parts"><li class="red">六角シャフト <b>×1</b></li><li class="red">ピニオン <b>×1</b></li><li class="black">駆動輪 <b>×2</b></li><li class="red">スリーブ <b>×2</b></li></ul>
+        <p class="tip"><strong>左右の駆動輪は 1 本の軸でつながり、同じ速さで回ります。</strong>このためまっすぐ進みます。回るときは、足で右の駆動輪を浮かせ、左だけで地面を押します。</p>
+        <p class="tip">駆動輪は、外寄りの 6 mm だけがシャフトにきつくはまります。ピニオンとスリーブはゆるく通ります。</p>
       </div>
     </section>
 
     <section class="step" id="step-4" data-label="手順 4">
       <div class="card">
         <p class="eyebrow">手順 4 / 10</p>
-        <h2>ピニオンを入れ、左の側板でまとめて留める</h2>
+        <h2>左の側板でまとめて留める</h2>
         <ol class="do">
-          <li>ピニオンを、デッキの<strong>下から</strong>入れます。歯が歯車の歯にかみ合い、長い筒が左へ向きます。</li>
-          <li>左の側板の<strong>下の</strong>丸い穴を、ピニオンの筒に通します。</li>
+          <li>車軸を持ち上げたまま、左の側板の<strong>下の</strong>大きい丸い穴を、左のスリーブに通します。</li>
           <li>デッキの 2 本とヨークの 2 本、左側の 4 本のツメを、側板の角穴に「カチッ」と止まるまで<strong>一緒に</strong>押し込みます。</li>
         </ol>
-        <ul class="parts"><li class="red">ピニオン <b>×1</b></li><li class="red">左の側板 <b>×1</b></li></ul>
-        <p class="tip"><strong>デッキだけを先に側板へ留めると、ヨークを付けられません。</strong>ヨークのツメが側板の角穴に入らなくなります。デッキとヨークは、左の側板にまとめて留めます。</p>
-        <p class="tip">左の側板は、補助輪のピンが<strong>後ろの外側</strong>に立っているほうです。ピニオンは歯車とかみ合うので、横からは入りません。</p>
+        <ul class="parts"><li class="red">左の側板 <b>×1</b></li></ul>
+        <p class="tip"><strong>デッキだけを先に側板へ留めると、ヨークを付けられません。</strong>ヨークのツメが側板の角穴に入らなくなります。デッキとヨークは、側板にまとめて留めます。</p>
+        <p class="tip">左の側板は、補助輪のピンが<strong>後ろの外側</strong>に立っているほうです。</p>
       </div>
     </section>
 
     <section class="step" id="step-5" data-label="手順 5">
       <div class="card">
         <p class="eyebrow">手順 5 / 10</p>
-        <h2>右の側板を、足の腕ごと付ける</h2>
+        <h2>右の側板で留める</h2>
         <ol class="do">
-          <li>スリーブを、右の側板の大きい丸い穴に<strong>内側から</strong>通します。</li>
-          <li>足の腕とスリーブを付けた右の側板を、右からまっすぐ寄せます。</li>
+          <li>右の側板の下の大きい丸い穴を、右のスリーブに通します。</li>
           <li>デッキとヨークの右側のツメを、側板の角穴に「カチッ」と止まるまで押し込みます。</li>
         </ol>
-        <ul class="parts"><li class="red">スリーブ <b>×1</b></li><li class="red">右の側板(足の腕つき) <b>×1</b></li></ul>
-        <p class="tip">足の腕は、車体の下の右寄りに収まります。寄せる途中で、ほかの部品には当たりません。</p>
+        <ul class="parts"><li class="red">右の側板 <b>×1</b></li></ul>
+        <p class="tip">これで車軸は左右の側板のあいだに挟まり、左右に動きません。駆動輪を手で回すと、ターンテーブルが回ります。</p>
       </div>
     </section>
 
     <section class="step" id="step-6" data-label="手順 6">
       <div class="card">
         <p class="eyebrow">手順 6 / 10</p>
-        <h2>駆動輪を付ける</h2>
-        <ol class="do">
-          <li>シャフトと一体の右の駆動輪を、右から差し込みます。六角のシャフトがスリーブとピニオンを通り、左の側板から出ます。</li>
-          <li>左の駆動輪(六角穴)を、シャフトの左端に押し込みます。</li>
-        </ol>
-        <ul class="parts"><li class="black">右の駆動輪(シャフト一体) <b>×1</b></li><li class="black">左の駆動輪(六角穴) <b>×1</b></li></ul>
-        <p class="tip"><strong>左右の駆動輪は 1 本の軸でつながり、同じ速さで回ります。</strong>このためまっすぐ進みます。曲がるときは、足で右の駆動輪を浮かせ、左だけで地面を押します。</p>
-        <p class="tip">足の腕の軸の先と C クリップは、右の駆動輪の内側に隠れます。左の駆動輪が抜けやすいときは、車輪の外に出たピンの溝に C クリップを足せます(1 個多く刷ります)。</p>
-      </div>
-    </section>
-
-    <section class="step" id="step-7" data-label="手順 7">
-      <div class="card">
-        <p class="eyebrow">手順 7 / 10</p>
         <h2>補助輪を付ける(右前と左後ろ)</h2>
         <ol class="do">
           <li>補助輪を、右の側板の前のピンと、左の側板の後ろのピンに通します。</li>
           <li>ピンの先の溝に C クリップをはめます。</li>
         </ol>
         <ul class="parts"><li class="black">補助輪 <b>×2</b></li><li class="red">C クリップ <b>×2</b></li></ul>
-        <p class="tip">補助輪は、駆動輪より 1 mm 高い位置に付きます。重心が車軸の少し前にあるので、ふだんは右前の補助輪が地面に着き、車体をわずかに前へ傾けて支えます。左後ろの補助輪は、後ろへ傾いたときに着きます。旋回のあいだは、足、左の駆動輪、右前の補助輪の 3 点で立ちます。</p>
+        <p class="tip">補助輪は、駆動輪より 1 mm 高い位置に付きます。重心が車軸の少し前にあるので、ふだんは右前の補助輪が地面に着き、車体をわずかに前へ傾けて支えます。左後ろの補助輪は、後ろへ傾いたときに着きます。回るあいだは、二股の足の右の先、左の駆動輪、右前の補助輪の 3 点で立ちます。</p>
+      </div>
+    </section>
+
+    <section class="step" id="step-7" data-label="手順 7">
+      <div class="card">
+        <p class="eyebrow">手順 7 / 10</p>
+        <h2>二股の足を組み、軸の棒で付ける</h2>
+        <ol class="do">
+          <li>二股の足の横棒の端のほぞを、足の腕の板の角穴に<strong>内側から</strong>「カチッ」と止まるまで差します。二股の先は下を向きます。</li>
+          <li>足の腕を車体の<strong>下から</strong>入れます。板は右の駆動輪の内側でハブの下をくぐり、筒は前でデッキの下に来ます。押し板をつなぐピンは後ろで外を向きます。</li>
+          <li>軸の棒を、左の側板の前の下の小さい丸い穴から差し、足の腕の筒を通して、右の側板の穴まで通します。</li>
+          <li>左右に出た棒の先の溝に、C クリップをはめます。</li>
+        </ol>
+        <ul class="parts"><li class="gray">足の腕 <b>×1</b></li><li class="gray">二股の足 <b>×1</b></li><li class="gray">軸の棒 <b>×1</b></li><li class="red">C クリップ <b>×2</b></li></ul>
+        <p class="tip">二股の先は、右が少し長くなっています。地面を押すのは右の先だけです。左の先は、車体が左へ傾いたときの倒れ止めです。</p>
+        <p class="tip">足の腕が軸の棒で自由に回り、放すと二股の先が地面から浮けば合っています。</p>
       </div>
     </section>
 
@@ -277,7 +279,7 @@ a { color: var(--signal); }
         </ol>
         <ul class="parts"><li class="gray">押し板 <b>×1</b></li><li class="red">C クリップ <b>×2</b></li></ul>
         <p class="tip">押し板は、頭が水平で止まったのを見てからつなぎます。ほかのファームウェアのままつなぐと、その角度で頭が上がり、足が下りてしまいます。</p>
-        <p class="tip">これで、頭を上げると足が下ります。足は、うなずき約 12° で地面に着きます。30° まで上げると、右の駆動輪が約 2 mm 浮きます。</p>
+        <p class="tip">これで、頭を上げると二股の足が下ります。足は、うなずき約 12° で地面に着きます。30° まで上げると、右の駆動輪が約 3 mm 浮きます。</p>
       </div>
     </section>
 
@@ -285,7 +287,7 @@ a { color: var(--signal); }
       <div class="card">
         <p class="eyebrow">完成</p>
         <h2>StopWatch かスマホで走らせる</h2>
-        <p>首振り(ヨー)のサーボを回し続けると、ターンテーブルと歯車を通して駆動輪が回ります。頭が水平のあいだはまっすぐ進み、頭を上げると足を軸にその場で回ります。</p>
+        <p>首振り(ヨー)のサーボを回し続けると、ターンテーブルと歯車を通して駆動輪が回ります。頭が水平のあいだはまっすぐ進み、頭を上げると二股の足の右の先のあたりを軸に、その場で回ります。</p>
         <ol class="do">
           <li><strong>StopWatch:</strong> M5Stack StopWatch に専用のファームを書き込み、両方の電源を入れると組になります。画面を指でなぞると進み、指を離すと止まります(<code>firmware/README.md</code> の「StopWatch コントローラー」)。</li>
           <li><strong>スマホ:</strong> 画面に出る QR を読んで家の Wi-Fi を設定し、次に出る QR で操作ページを開きます。丸いジョイスティックを上下に倒すと前進・後退、左右に大きく(4 割より多く)倒すと旋回します。</li>
