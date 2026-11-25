@@ -20,17 +20,17 @@
   },
   {
    "key": "rail_L",
-   "label": "左の側板(後ろに補助輪)",
+   "label": "左の側板(後ろに補助輪、前に倒れ止めの脚)",
    "color": "red",
    "count": 1,
    "size_mm": [
     66.4,
-    89.0,
+    91.0,
     14.3
    ],
-   "volume_cm3": 23.29,
+   "volume_cm3": 24.76,
    "overhang_mm2": 4.4,
-   "bed_mm2": 4614.6,
+   "bed_mm2": 4909.3,
    "orientation": "内面を下(補助輪のピンを上へ立てる)",
    "support": false,
    "watertight": true,

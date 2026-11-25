@@ -115,7 +115,14 @@ FOOT_CLEAR = -FOOT_GAP  # verify 用: 直進のとき、足が地面の線より
 # 前後の支えは補助輪(転がる)。右の側板の前と、左の側板の後ろに 1 個ずつ。
 # 足が車軸の後ろにあるので、重心(車軸の 3 mm 前)をはさんで反対の右前に支えが要る(左前では、地面を押す左の駆動輪に重さが残らない)。
 # 突起だけの支えは、直進中ずっと地面をこする(重心が車軸の 2 mm 前にあり、前の支えに重さの 5% がかかる)ので、車輪にした。
-# 倒れ止めの突起は付けない。足を下ろして車体が傾くと、左後ろの突起が地面に着いてこすった(計算)
+# 左後ろには倒れ止めの突起を付けない。足を下ろして車体が傾くと、左後ろの突起が地面に着いてこすった(計算)
+# 左前には倒れ止めの脚を付ける。後退しながら左へ回り始めると、車ごと前へつんのめって倒れた(実物、2026-11-25、速さの上限 40% 以上。30% では倒れない)。
+# 旋回中の 3 点の支えのうち、前の縁(左の駆動輪と右前の補助輪を結ぶ線)が重心にいちばん近く、その先の左前には支えがない。
+# 補助輪を 4 個にして同じ高さにはできない: 右の駆動輪が浮くとき左前は 1.55 倍下がるので、同じ高さだと右の輪が浮く前に左前が着く
+SKID_Y = 42.0  # 倒れ止めの脚の前後の位置(側板の前の下)
+SKID_R = 4.0  # 脚の先の丸みの半径
+SKID_ROOT_Y = 10.0  # 脚の後ろの縁が側板の下の縁から出る前後の位置
+SKID_CLEAR = 1.0  # 旋回の姿勢(うなずき端)で、脚の先と地面のすきま。直進のときの浮きは skid_lift() で決まる
 AUX = dict(r=trike.AUX["r"], w=trike.AUX["w"], y=40.0, lift=1.0)  # 補助輪は trike と同じ部品。直進のとき地面から lift 浮く
 AUX_Z = GROUND_Z + AUX["lift"] + AUX["r"]
 AUX_CLEAR = SEAT + AUX["w"] + 0.2  # 座の面から C クリップの溝まで
@@ -254,8 +261,15 @@ def rail_r_part() -> Manifold:
 
 @lru_cache(maxsize=None)
 def rail_l_part() -> Manifold:
-    """左の側板。後ろに補助輪。"""
-    return _rail(-AUX["y"]).mirror((1, 0, 0))
+    """左の側板。後ろに補助輪、前の下に倒れ止めの脚(板と同じ厚みなので、内面を下にしてそのまま刷れる)。"""
+    rail = _rail(-AUX["y"])
+    # 脚の後ろの縁を、側板の下の縁(補助輪の節と軸の棒の節を結ぶ線)の途中から引き出し、板からなだらかに伸びる形にする
+    k = (SKID_ROOT_Y + AUX["y"]) / (HINGE[0] + AUX["y"])
+    root = circle(5.0 + 1.5 * k, SKID_ROOT_Y, AUX_Z + k * (HINGE[1] - AUX_Z))
+    leg = hull2(circle(6.5, *HINGE), root, circle(SKID_R, SKID_Y, GROUND_Z + skid_lift() + SKID_R))
+    rail += plate_yz(leg, d.PLATE_IN, d.PLATE_OUT)
+    rail -= _bore_x(SHAFT_R + JOINT_FIT, d.PLATE_IN, d.PLATE_OUT, *HINGE)
+    return rail.mirror((1, 0, 0))
 
 
 @lru_cache(maxsize=None)
@@ -520,7 +534,7 @@ def part_defs() -> dict[str, PartDef]:
     base_defs = base.part_defs()
     defs = [
         PartDef("rail_R", "右の側板(前に補助輪)", rail_r_part, c["gray"], 1),
-        PartDef("rail_L", "左の側板(後ろに補助輪)", rail_l_part, c["gray"], 1),
+        PartDef("rail_L", "左の側板(後ろに補助輪、前に倒れ止めの脚)", rail_l_part, c["gray"], 1),
         PartDef("yoke", "ヨーク(腕にデッキの角のツメの角穴。側板へのツメはなし)", yoke_part, c["gray"], 1),
         PartDef("deck", "デッキ(駆動輪の所を切り欠き、ヨークを受ける角が 4 本)", deck_part, c["gray"], 1),
         PartDef("pinion", "ピニオン(左の筒を切る)", pinion_part, c["gray"], 1),
@@ -676,6 +690,25 @@ _LOW_POINTS = [("二股の左の先", -FORK_X, FORK_Y, _turn((FORK_Y, TIP_L_Z), 
                ("足の腕の板の下", (ARM_X[0] + ARM_X[1]) / 2, FORK_Y, _turn((FORK_Y, FORK_MID_Z - 6.0), _PHI_MAX)[1] - GROUND_Z),
                ("押し板の下の端", (LINK_X[0] + LINK_X[1]) / 2, _arm_in(_PHI_MAX)[0], _arm_in(_PHI_MAX)[1] - 4.5 - GROUND_Z)]
 _WHEEL_X = DRIVE_X0 + base.TIRE_W / 2
+
+
+def spin_ground(x: float, y: float) -> float:
+    """頭を上げきって旋回する姿勢で、車体の座標から見た地面の高さ [mm](直進のときの地面が 0、上が正)。
+
+    車体は 足・左の駆動輪・右前の補助輪 の 3 点で立つ(verify_car.statics と同じ平面)。
+    """
+    below = foot_drop(math.radians(NOD_RANGE[1])) + FOOT_CLEAR
+    pts = np.array([_FOOT, (-_WHEEL_X, 0.0), _SUPPORTS[0][:2]], float)
+    plane = np.linalg.solve(np.column_stack([pts, np.ones(3)]), np.array([-below, 0.0, _SUPPORTS[0][2]]))
+    return float(plane @ np.array([x, y, 1.0]))
+
+
+def skid_lift() -> float:
+    """倒れ止めの脚の先が、直進のとき地面から浮く量 [mm]。側板の外面の側(地面に近い側)で SKID_CLEAR 残す。"""
+    return spin_ground(-d.PLATE_OUT, SKID_Y) + SKID_CLEAR
+
+
+_LOW_POINTS.append(("左前の倒れ止めの脚", -d.PLATE_OUT, SKID_Y, skid_lift()))
 STATICS = dict(
     cases=[
         dict(name="頭を上げきって右の足を下ろす(うなずき 30°)", foot=_FOOT, wheel=(-_WHEEL_X, 0.0), lifted=(_WHEEL_X, 0.0), supports=_SUPPORTS,
