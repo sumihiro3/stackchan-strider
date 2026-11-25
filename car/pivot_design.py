@@ -22,7 +22,7 @@ import math
 from functools import lru_cache
 
 import numpy as np
-from manifold3d import Manifold
+from manifold3d import JoinType, Manifold
 
 import car_design as base
 import trike_design as trike
@@ -32,6 +32,16 @@ from car_design import (  # noqa: F401  verify_car / build_car / render_car が�
 )
 
 d = base.d
+
+# 駆動輪をヨークの下(x ±30〜40)へ寄せるため、タイヤの上(z 30)より上へ、ターンテーブルから上をまとめて上げる。
+# 歯車の歯とかみ合いは動かさず、ターンテーブル歯車の首だけが長くなる。walker/ は書き換えず、ここで上書きする
+TABLE_RAISE = 6.5
+if not getattr(d, "_pivot_table_raised", False):
+    for _name in ("TABLE_Z0", "BOSS_TOP", "TABLE_Z1", "FRAME_Z1", "COLLAR_Z0", "COLLAR_Z1"):
+        setattr(d, _name, getattr(d, _name) + TABLE_RAISE)
+    d.PITCH_Z = d.TABLE_Z1 + d.SC_PITCH_AXIS_H
+    d._pivot_table_raised = True
+
 OUT = ROOT / "out" / "pivot"
 PUBLISH = ROOT / "print_pivot"
 PROJECT_NAME = "stackchan_pivot"
@@ -65,41 +75,84 @@ LEVER_X = (d.SC_HEAD_HALF_W, d.SC_HEAD_HALF_W + 3.4)  # 耳の円板(x 27.2〜30
 PIN_R = 24.0
 PIN_SHOULDER_R = 3.5  # P の太い根元。押し板が内へずれるのを止める段
 
-# 仕組みは側板の内側に並べる(x)。レバーの外面 30.4 → 足の腕(内面 31.0)と、その耳の外に押し板 → 側板の内面 45.5。
-# 押し板は、P と耳のピンのどちらにも外から(-X へ)差す。同じ向きなので、たわませずに付けられる
+# 押し板は、レバーのピン P と足の腕の耳のピンのどちらにも外から(-X へ)差す。同じ向きなので、たわませずに付けられる
 SEAT = 0.3  # 板どうしのすきま
-ARM_X = (LEVER_X[1] + 0.6, d.PLATE_IN - SEAT)  # 足の腕の幅。この幅の足が地面を押す
-LUG_X = (ARM_X[0], ARM_X[0] + 3.3)  # 足の腕の、押し板をつなぐ耳(足より後ろは、この厚みだけになる)
+LUG_X = (LEVER_X[1] + 0.6, LEVER_X[1] + 3.9)  # 足の腕の、押し板をつなぐ耳の外面の位置(押し板の位置は前の形と同じ)
 LINK_T = 3.0
 LINK_X = (LUG_X[1] + SEAT, LUG_X[1] + SEAT + LINK_T)
 JOINT_FIT = 0.3  # 回るピンと穴のすきま(半径)。0.15 では、寝かせて刷ったピンが回らなかった
 
-# 足の腕。右の側板の穴を軸に回る。直進の姿勢で、軸を原点にした (y, z)
-SHAFT_R = 3.0  # 側板を貫く軸の太さ
-# 赤い仕組みが車体につながるのは、この軸 1 本だけ(片持ち)。軸受けが側板の厚み 5 mm だけだと、腕の後ろの端が左右に 2〜3 mm 振れる(計算)。
-# 側板の外へ軸受けの筒を足して長くし(駆動輪の内面 x = 58 の手前まで)、腕が側板に当たる面も広げる
-PIVOT_BOSS_X1 = d.PLATE_OUT + 3.0
-PIVOT_BOSS_R = 6.5
-HUB_R = 7.5  # 腕が側板の内面に当たる面の半径。車軸のスリーブ(半径 9、軸から 17.8 mm)まで 1.3 mm
-# 軸の位置(車の座標)。車軸のスリーブ(半径 9)の前の下。軸の先と C クリップは、駆動輪の内側に隠れる
-PIVOT = (11.0, -14.0)
-# 押し板がつながる点。デッキの後ろの端(y -37)とヨークのカラー(半径 44.7)より後ろ。
-# 軸の高さより少し上から下へ振れる位置にして、前後にほとんど動かないようにする
-ARM_IN = (-56.5, 4.5)
-ARM_FOOT = (-31.0, -9.5)  # 足の円の中心。直進のとき、足は地面から 2.5 mm 浮く
-FOOT_R = 4.0
-FOOT_CLEAR = GROUND_Z - (PIVOT[1] + ARM_FOOT[1] - FOOT_R)  # 直進のとき、足が地面から浮いている量(負の値 = 浮いている)
+# 足の腕の軸の棒(車の座標の (y, z))。左右の側板に通して、両端を C クリップで留める。
+# 前の形は右の側板だけで支える片持ちで、腕の後ろの端が左右に 2〜3 mm 振れた(計算)。
+# 駆動輪のタイヤ(半径 30)の前、デッキの下。右前の補助輪とそのクリップより上
+HINGE = (37.5, -3.0)
+SHAFT_R = 3.0
+HUB_TUBE_R = 5.5  # 足の腕が棒に通る筒。右の側板の内面まで伸ばし、腕が左右に振れないようにする
+# 押し板がつながる点(車の座標)。タイヤの後ろ。前の形より 6.5 mm 高い(ターンテーブルと一緒に P も上がったので、押し板は同じ長さ)
+ARM_IN = (-45.5, -3.0)
 # 押し板の折れ目(直進の姿勢、車の座標の (y, z))。P から後ろへ下り、ここから足の腕の耳までまっすぐ下りる
-LINK_KNEE = (PIVOT[0] + ARM_IN[0], 38.0)
+LINK_KNEE = (ARM_IN[0], 44.5)
+# 足の腕の板(x)。車体の真ん中を、シャフトの下でくぐる。
+# 前の形は板が x 23〜26 でピニオンの歯まで 0.7 mm、二股の足がピニオンとタイヤまで 1.5 mm しかなかった。
+# 刷った車で両方がピニオンとタイヤをこすり(赤と黒の跡)、右へ回ると途中で止まった(2026-11-25)
+ARM_X = (-3.0, 3.0)
+ARM_KNEE = (6.0, -21.0)  # 板の折れ目(シャフトの下)
+# 足の先。板から右へ出し、車軸の少し後ろで地面を押す。駆動輪は横へすべりにくいので、回る中心は車軸の線の上の x = FOOT_X[0] に来る。
+# 足を車軸に近づけるほど、回るとき足が床をすべる半径(位置のずれ)は小さくなる。
+# ただし、後ろへ倒れやすくなり、足と押し板にかかる力が増える。10 mm 後ろで折り合いを付けた(前の形は 20 mm 後ろ)。
+# 足の先を真ん中(x 0)にすると回す力の余裕が約半分になるので、右へ出す
+FOOT_X = (8.0, 11.0)  # 足の先の平らな底の x。旋回中は車体が左へ傾くので、内側の端(8)が地面を押す。外の端はピニオンの歯から 2.7 mm 離す
+FOOT_Y = -10.0
+FOOT_HALF_Y = 4.0  # 足の先の前後の幅の半分
+FOOT_RISE = 3.0  # 足の腕の板の下面が、足の先の底より高い量(地面に着くのは足の先だけ)。板から足の先までは斜めに下げ、サポートなしで刷れる
+FOOT_GAP = 3.3  # 直進のとき、足の先が地面から浮いている量。左の側板のあご(刷ってある)が、旋回の姿勢で地面から 1 mm 浮くように決める
+FOOT_Z0 = GROUND_Z + FOOT_GAP  # 足の先の底(直進の姿勢)
+FOOT_CLEAR = -FOOT_GAP  # verify 用: 直進のとき、足が地面の線より下がっている量(負の値 = 浮いている)
 
 # 前後の支えは補助輪(転がる)。右の側板の前と、左の側板の後ろに 1 個ずつ。
 # 足が車軸の後ろにあるので、重心(車軸の 3 mm 前)をはさんで反対の右前に支えが要る(左前では、地面を押す左の駆動輪に重さが残らない)。
 # 突起だけの支えは、直進中ずっと地面をこする(重心が車軸の 2 mm 前にあり、前の支えに重さの 5% がかかる)ので、車輪にした。
-# 倒れ止めの突起は付けない。足を下ろして車体が傾くと、左後ろの突起が地面に着いてこすった(計算)
+# 左後ろには倒れ止めの突起を付けない。足を下ろして車体が傾くと、左後ろの突起が地面に着いてこすった(計算)
+# 左前には倒れ止めの脚を付ける。後退しながら左へ回り始めると、車ごと前へつんのめって倒れた(実物、2026-11-25、速さの上限 40% 以上。30% では倒れない)。
+# 旋回中の 3 点の支えのうち、前の縁(左の駆動輪と右前の補助輪を結ぶ線)が重心にいちばん近く、その先の左前には支えがない。
+# 補助輪を 4 個にして同じ高さにはできない: 右の駆動輪が浮くとき左前は 1.55 倍下がるので、同じ高さだと右の輪が浮く前に左前が着く
+SKID_Y = 42.0  # 倒れ止めの脚の前後の位置(側板の前の下)
+SKID_R = 4.0  # 脚の先の丸みの半径
+SKID_ROOT_Y = 10.0  # 脚の後ろの縁が側板の下の縁から出る前後の位置
+SKID_LIFT = 6.6223  # 脚の先の、直進のときの地面からの浮き(2026-11-25 に刷った左の側板の値。旋回の姿勢で 1 mm 残るように決めた)
 AUX = dict(r=trike.AUX["r"], w=trike.AUX["w"], y=40.0, lift=1.0)  # 補助輪は trike と同じ部品。直進のとき地面から lift 浮く
 AUX_Z = GROUND_Z + AUX["lift"] + AUX["r"]
 AUX_CLEAR = SEAT + AUX["w"] + 0.2  # 座の面から C クリップの溝まで
 WHEELBASE = AUX["y"]  # verify_car.py の重さの配分(駆動輪の車軸 y = 0、もう一方 = 左前の補助輪 y = WHEELBASE)
+
+# 駆動輪はヨークの下。車軸には、内から ピニオン(背面 x = GEAR_BACK)→ 駆動輪のハブ → 駆動輪 → スリーブ → 側板 の順に並ぶ(左は鏡写し)。
+# 傘歯車がピニオンを押す力は、ハブ・駆動輪・スリーブのつばを通って側板が受ける
+AXLE_GAP = 0.2  # ピニオンの背面と駆動輪のハブのすきま
+DRIVE_X0 = d.GEAR_BACK + AXLE_GAP + (base.WHEEL_X0 - base.HUB_X0)  # 駆動輪の内面 |x|(ハブは内面から 7.1 mm 内へ出る)
+DRIVE_X1 = DRIVE_X0 + base.TIRE_W
+SLEEVE_X0 = DRIVE_X1 + 0.1  # スリーブの内端
+SHAFT_HALF = d.L0 - 0.3
+DRIVE_HUB_X0 = d.GEAR_BACK + AXLE_GAP  # 駆動輪のハブの内側の端 |x|
+GRIP_AF = 8.2  # シャフトの太い所の二面幅(穴 8.3 とのすきま 0.1。car の後輪の圧入と同じすきま)
+GRIP_LEN = 3.0  # 太い所の長さ = 車輪をきつく押す距離
+GRIP_LEAD = 0.5  # 太い所の入口の斜面の長さ
+SLEEVE_GRIP = 3.0  # スリーブの穴の、外寄りの細い所の長さ
+DECK_CLEAR = 2.0  # デッキの切り欠きと、駆動輪・ハブのすきま
+# デッキの角(オリジナルの側板の角と同じ留め方): ヨークの腕の下に立つ板と、先の 2 本爪のツメ
+HORN_X = (30.0, d.PLATE_IN - 0.2)  # 板の x の範囲(ターンテーブル歯車の外、側板の内面の手前)
+HORN_Y = 33.0  # 板の厚みの中心 |y|(タイヤの上を避ける。ヨークの腕 y 27〜37 の中)
+HORN_T = 5.0  # 板の厚み(オリジナルの側板と同じ)
+HORN_TX = 37.5  # ツメの中心 |x|
+HORN_FLEX = 5.0  # ツメの割りを板へ延ばす長さ(返しが穴を通るときに、爪がたわむ)
+HORN_SLOT_FIT = 0.2  # ヨークの角穴のすきま(片側)
+DECK_ROUND = 2.0  # デッキの外形の四隅の丸み
+SLOT_ROUND = 2.0  # 切り欠きの角の丸み
+HORN_ROUND = 3.0  # 角を横から見た上の角の丸み
+ARCH_TABLE_GAP = 2.0  # アーチの上面と、ターンテーブル円板の下面のすきま
+ARCH_BEAM = 5.0  # アーチの上の梁の高さ
+ARCH_POST = 5.0  # アーチの真ん中の柱の幅
+ARCH_WINDOW_R = 7.0  # 窓の上の角の丸み(刷るときの橋渡しを短くする)
+HORN_TIP = 1.7  # ツメの先の長さ(腕の上面から)。右後ろのツメの先が、うなずき 30° で押し板に当たらない長さに切る
 
 EXTRA_MASSES: list = []
 
@@ -115,10 +168,15 @@ def _pin(theta: float) -> tuple[float, float]:
     return -PIN_R * math.cos(a), AXIS_Z - PIN_R * math.sin(a)
 
 
+def _turn(point: tuple[float, float], phi: float) -> tuple[float, float]:
+    """足の腕に付いた点 (y, z)(直進の姿勢)が、腕が phi [rad] 回ったときに来る位置。phi が正で、軸より後ろの点が下がる。"""
+    y, z = point[0] - HINGE[0], point[1] - HINGE[1]
+    return HINGE[0] + y * math.cos(phi) - z * math.sin(phi), HINGE[1] + y * math.sin(phi) + z * math.cos(phi)
+
+
 def _arm_in(phi: float) -> tuple[float, float]:
-    """足の腕が phi [rad] 回ったときの、押し板がつながる点の (y, z)。phi が正で足が下がる。"""
-    y, z = ARM_IN
-    return PIVOT[0] + y * math.cos(phi) - z * math.sin(phi), PIVOT[1] + y * math.sin(phi) + z * math.cos(phi)
+    """足の腕が phi [rad] 回ったときの、押し板がつながる点の (y, z)。"""
+    return _turn(ARM_IN, phi)
 
 
 LINK_L = math.dist(_pin(NEUTRAL), _arm_in(0.0))  # 押し板の上の穴と下の穴の間隔
@@ -139,10 +197,8 @@ def arm_angle(theta: float) -> float:
 
 
 def foot_drop(theta: float) -> float:
-    """足の底が、直進の位置から下がった量 [mm]。"""
-    phi = arm_angle(theta)
-    y, z = ARM_FOOT
-    return z - (y * math.sin(phi) + z * math.cos(phi))
+    """足の先の底が、直進の位置から下がった量 [mm]。"""
+    return FOOT_Z0 - _turn((FOOT_Y, FOOT_Z0), arm_angle(theta))[1]
 
 
 def steering_geometry() -> tuple[float, float]:
@@ -170,19 +226,18 @@ def _pin_x(x0: float, clear: float, y: float, z: float) -> Manifold:
     return apply(d.grooved_pin(0.0, clear), AXIS_Z_TO_X).translate((x0 - 0.01, y, z))
 
 
-def _rail(aux_y: float, pivot: bool) -> Manifold:
-    """側板(右の向き)。walker と同じ軸受け穴と角穴に、補助輪のピンを足す。外形は、節をまとめて 1 つの凸の形にする(枝分かれさせない)。
+def _rail(aux_y: float) -> Manifold:
+    """側板(右の向き)。walker と同じ軸受け穴と角穴に、補助輪のピンと足の腕の軸の棒の穴を足す。
+    外形は、節をまとめて 1 つの凸の形にする(枝分かれさせない)。
 
-    aux_y: 補助輪の前後の位置。pivot: 足の腕の軸の穴をあけるか。
-    補助輪のピンを上へ立てるため、内面を下にして刷る。
+    aux_y: 補助輪の前後の位置。補助輪のピンを上へ立てるため、内面を下にして刷る。
     """
     deck_mid = (d.DECK_Z0 + d.DECK_Z1) / 2
     lug_mid = d.COLLAR_Z0 + d.COLLAR_LUG_T / 2
     nodes = [circle(13.0, 0, 0), circle(5.0, aux_y, AUX_Z)]
     for sign in (1, -1):
         nodes += [circle(7.5, sign * d.DECK_TENON_Y, deck_mid), circle(7.5, sign * d.YOKE_TENON_Y, lug_mid)]
-    if pivot:
-        nodes.append(circle(HUB_R + 0.5, *PIVOT))  # 足の腕の軸受け
+    nodes.append(circle(6.5, *HINGE))  # 足の腕の軸の棒
     section = hull2(*nodes)
     section -= circle(d.SLEEVE_R + HOLE_FIT)
     for sign in (1, -1):
@@ -191,37 +246,69 @@ def _rail(aux_y: float, pivot: bool) -> Manifold:
     rail = plate_yz(section, d.PLATE_IN, d.PLATE_OUT)
     rail += cyl_x(d.STUD_R + 1.5, d.PLATE_OUT - 0.01, d.PLATE_OUT + SEAT, aux_y, AUX_Z)  # 補助輪の内面を受ける座
     rail += _pin_x(d.PLATE_OUT, AUX_CLEAR, aux_y, AUX_Z)
-    if pivot:
-        rail += cyl_x(PIVOT_BOSS_R, d.PLATE_OUT - 0.01, PIVOT_BOSS_X1, *PIVOT)
-        rail -= _bore_x(SHAFT_R + JOINT_FIT, d.PLATE_IN, PIVOT_BOSS_X1, *PIVOT)  # 足の腕の軸が通る穴
+    rail -= _bore_x(SHAFT_R + JOINT_FIT, d.PLATE_IN, d.PLATE_OUT, *HINGE)  # 足の腕の軸の棒が通る穴
     return rail
 
 
 @lru_cache(maxsize=None)
 def rail_r_part() -> Manifold:
-    """右の側板。前に補助輪、車軸の前の下に足の腕の軸の穴。"""
-    return _rail(AUX["y"], True)
+    """右の側板。前に補助輪。"""
+    return _rail(AUX["y"])
 
 
 @lru_cache(maxsize=None)
 def rail_l_part() -> Manifold:
-    """左の側板。後ろに補助輪。足の腕の穴はない。"""
-    return _rail(-AUX["y"], False).mirror((1, 0, 0))
+    """左の側板。後ろに補助輪、前の下に倒れ止めの脚(板と同じ厚みなので、内面を下にしてそのまま刷れる)。"""
+    rail = _rail(-AUX["y"])
+    # 脚の後ろの縁を、側板の下の縁(補助輪の節と軸の棒の節を結ぶ線)の途中から引き出し、板からなだらかに伸びる形にする
+    k = (SKID_ROOT_Y + AUX["y"]) / (HINGE[0] + AUX["y"])
+    root = circle(5.0 + 1.5 * k, SKID_ROOT_Y, AUX_Z + k * (HINGE[1] - AUX_Z))
+    leg = hull2(circle(6.5, *HINGE), root, circle(SKID_R, SKID_Y, GROUND_Z + skid_lift() + SKID_R))
+    rail += plate_yz(leg, d.PLATE_IN, d.PLATE_OUT)
+    rail -= _bore_x(SHAFT_R + JOINT_FIT, d.PLATE_IN, d.PLATE_OUT, *HINGE)
+    return rail.mirror((1, 0, 0))
 
 
 @lru_cache(maxsize=None)
 def foot_part() -> Manifold:
-    """足の腕(ローカル: 軸 = (y, z) の原点、x は車の座標のまま、直進の姿勢)。右の側板の内側(車体の下)にある。
+    """足の腕(車の座標、直進の姿勢)。前の軸の棒から、車体の真ん中をシャフトの下でくぐって後ろへ伸びる板。
 
-    軸から後ろへ伸び、途中の丸い足が地面を押す。後ろの端の耳のピンを、押し板が押し下げる。軸は側板の穴を通って外へ出て、先の溝に C クリップ。
-    軸と耳のピンを上へ立てるため、内側の面を下にして刷る(太い順に重なるので、サポートは要らない)。
+    途中から右へ足の先を出し、後ろの端から右へ横棒を出して、押し板をつなぐ耳とピンを付ける。軸の筒は右の側板の内面まで伸びる。
+    筒・足の先・横棒・耳のピンはどれも +x へ出るので、内側の面(x = ARM_X[0])を下にして刷る。
     """
-    body = hull2(circle(HUB_R, 0, 0), circle(FOOT_R, *ARM_FOOT))
-    lug = hull2(circle(FOOT_R, *ARM_FOOT), circle(4.5, *ARM_IN))
-    foot = plate_yz(body, *ARM_X) + plate_yz(lug, *LUG_X)
-    foot += _pin_x(LUG_X[1], SEAT + LINK_T + 0.2, *ARM_IN)
-    foot += cyl_x(SHAFT_R, ARM_X[1] - 0.01, PIVOT_BOSS_X1 + SEAT)
-    return foot + _pin_x(PIVOT_BOSS_X1 + SEAT, 0.2, 0.0, 0.0)
+    hub, knee, rear = circle(6.0, *HINGE), circle(4.0, *ARM_KNEE), circle(4.5, *ARM_IN)
+    lobe = circle(4.0, FOOT_Y, FOOT_Z0 + FOOT_RISE + 4.0)
+    section = hull2(hub, knee) + hull2(knee, lobe) + hull2(lobe, rear)
+    arm = plate_yz(section, *ARM_X)
+    arm += cyl_x(HUB_TUBE_R, ARM_X[1] - 0.01, d.PLATE_IN - SEAT, *HINGE)
+    arm -= _bore_x(SHAFT_R + JOINT_FIT, ARM_X[0], d.PLATE_IN - SEAT, *HINGE)
+    arm += _foot_tip()
+    arm += plate_yz(rear, ARM_X[1] - 0.01, LUG_X[1])
+    return arm + _pin_x(LUG_X[1], SEAT + LINK_T + 0.2, *ARM_IN)
+
+
+def _foot_tip() -> Manifold:
+    """足の先。板の右の面から斜めに下がり、x = FOOT_X で平らな底になる。前後の角は丸める。"""
+    x0, top = ARM_X[1] - 0.01, FOOT_Z0 + FOOT_RISE + 8.0
+    section = polygon([(x0, FOOT_Z0 + FOOT_RISE), (FOOT_X[0], FOOT_Z0), (FOOT_X[1], FOOT_Z0), (FOOT_X[1], top), (x0, top)])
+    tip = apply(section.extrude(2 * FOOT_HALF_Y), _XZ_TO_XYZ).translate((0, FOOT_Y - FOOT_HALF_Y, 0))
+    r, inset = 3.0, FOOT_HALF_Y - 3.0
+    rounded = hull2(circle(r, FOOT_Y - inset, FOOT_Z0 + r), circle(r, FOOT_Y + inset, FOOT_Z0 + r),
+                    rect(FOOT_Y - FOOT_HALF_Y, FOOT_Y + FOOT_HALF_Y, FOOT_Z0 + r, top))
+    return tip ^ plate_yz(rounded, x0, FOOT_X[1])
+
+
+_XZ_TO_XYZ = np.array([[1.0, 0, 0, 0], [0, 0, 1.0, 0], [0, 1.0, 0, 0]])  # 断面 (x, z) を y の向きに押し出した形を、車の座標へ
+
+
+@lru_cache(maxsize=None)
+def hinge_rod_part() -> Manifold:
+    """足の腕の軸の棒(車の座標)。左右の側板を貫き、両端の溝に C クリップ。下の面を少し平らに削り、寝かせて刷る。"""
+    x0 = d.PLATE_OUT + SEAT
+    rod = cyl_x(SHAFT_R, -x0, x0, *HINGE)
+    end = _pin_x(x0, 0.2, *HINGE)
+    rod += end + end.mirror((1, 0, 0))
+    return rod.trim_by_plane((0, 0, 1), HINGE[1] - SHAFT_R + 0.8)  # 両端のピン(半径 2.5)の下も平らになる
 
 
 def _link_ends() -> tuple[tuple[float, float], tuple[float, float]]:
@@ -291,34 +378,160 @@ def _lego_pins(sx: int) -> Manifold:
 
 @lru_cache(maxsize=None)
 def wheel_drive_part() -> Manifold:
-    """左の駆動輪(六角穴。trike の 1 回目に刷ったものと同じ形)。六角穴は外寄り TIGHT_X だけ圧入、奥の壁をシャフトの先のピンが貫く。"""
-    loose = d.SHAFT_AF + d.SHAFT_BORE_CLEARANCE
-    lead = Manifold.batch_hull([base._hex_bore_x(base.WHEEL_SOCKET_AF + 2 * base.WHEEL_SOCKET_LEAD, base.TIGHT_X[0] - 0.01, base.TIGHT_X[0]),
-                                base._hex_bore_x(base.WHEEL_SOCKET_AF, base.TIGHT_X[0] + base.WHEEL_SOCKET_LEAD, base.TIGHT_X[0] + base.WHEEL_SOCKET_LEAD + 0.01)])
-    wheel = trike._drive_wheel_body() - base._hex_bore_x(loose, -20.0, base.TIGHT_X[0]) - lead
-    wheel -= base._hex_bore_x(base.WHEEL_SOCKET_AF, base.TIGHT_X[0], base.TIRE_W - trike.DRIVE_WALL)
-    return wheel - cyl_x(d.STUD_R + HOLE_FIT, 0.0, base.TIRE_W + 1.0)
+    """駆動輪(左右同じ。ローカルは trike の駆動輪と同じ: 軸 = X、内面 x = 0)。六角穴は貫通で、全長をピニオンと同じすきまにする。
+
+    シャフトの端から車輪の位置まで 10 mm 以上すべらせるので、圧入にすると押し込めない(実物で確かめた)。
+    車輪はピニオンとスリーブに左右から挟まれて動かないので、圧入は要らない。
+    """
+    return trike._drive_wheel_body() - base._hex_bore_x(d.SHAFT_AF + d.SHAFT_BORE_CLEARANCE, -20.0, base.TIRE_W + 1.0)
+
+
+@lru_cache(maxsize=None)
+def shaft_part() -> Manifold:
+    """六角シャフト。左のスリーブから右のスリーブまで通り、ピニオン・駆動輪・スリーブを貫く。寝かせて刷る。
+
+    駆動輪のハブの内側の端が来る所(|x| = DRIVE_HUB_X0 から GRIP_LEN)だけ、少し太くする。
+    車輪は最後の GRIP_LEN だけきつくなって止まり、ピニオンと車輪が 1 本のかたまりになる(組むときに崩れない)。
+    太い所は下の平らな面からは出さない(寝かせて刷るとき、シャフト全体がベッドに着くように)。
+    """
+    shaft = base._hex_bore_x(base.SHAFT_ACTUAL_AF, -SHAFT_HALF, SHAFT_HALF)
+    bottom = -base.SHAFT_ACTUAL_AF / 2
+    for sx in (1, -1):
+        x0, x1 = DRIVE_HUB_X0, DRIVE_HUB_X0 + GRIP_LEN
+        grip = base._hex_bore_x(GRIP_AF, x0, x1) + Manifold.batch_hull(
+            [base._hex_bore_x(GRIP_AF, x1 - 0.01, x1), base._hex_bore_x(base.SHAFT_ACTUAL_AF, x1 + GRIP_LEAD, x1 + GRIP_LEAD + 0.01)])
+        grip = grip.trim_by_plane((0, 0, 1), bottom)
+        shaft += grip if sx > 0 else grip.mirror((1, 0, 0))
+    return shaft
+
+
+@lru_cache(maxsize=None)
+def pinion_part() -> Manifold:
+    """ピニオン。walker の形から、左の側板まで伸びていた筒を切る(左の駆動輪がそこに入る)。"""
+    return d.pinion_part().trim_by_plane((1, 0, 0), -d.GEAR_BACK)
+
+
+@lru_cache(maxsize=None)
+def sleeve_part() -> Manifold:
+    """スリーブ(右の向き。左は 180° 回して使う)。walker の形の外寄りだけ。つばが側板の内面に当たり、駆動輪の外面を受ける。"""
+    sleeve = d.sleeve_part().trim_by_plane((1, 0, 0), SLEEVE_X0)
+    # 外寄り SLEEVE_GRIP だけ穴を細くする。シャフトの先が入るのは最後の約 2.7 mm だけなので押し込める
+    x1 = d.L0
+    x0 = x1 - SLEEVE_GRIP
+    ring = base._hex_bore_x(d.SHAFT_AF + d.SHAFT_BORE_CLEARANCE + 0.6, x0, x1 - 0.01)
+    lead = Manifold.batch_hull([base._hex_bore_x(d.SHAFT_AF + d.SHAFT_BORE_CLEARANCE, x0 - 0.01, x0),
+                                base._hex_bore_x(base.WHEEL_SOCKET_AF, x0 + GRIP_LEAD, x0 + GRIP_LEAD + 0.01)])
+    return sleeve + (ring - lead - base._hex_bore_x(base.WHEEL_SOCKET_AF, x0, x1 + 1.0))
+
+
+ARCH_STYLE = "rail"  # 前後のつなぎの形: windows(窓 2 つ) / bow(弓) / truss(斜めの支え) / rail(低い手すり)
+
+
+def _arch_section():
+    """前後で左右の角をつなぐ板の、x–z の断面。角との境目のへこんだ角は丸める。"""
+    z0, top, x0 = d.DECK_Z1 - 0.01, d.TABLE_Z0 - ARCH_TABLE_GAP, HORN_X[0]
+    horns = rect(x0, x0 + 6.0, z0, d.COLLAR_Z0) + rect(-x0 - 6.0, -x0, z0, d.COLLAR_Z0)
+    if ARCH_STYLE == "windows":
+        s = rect(-x0 - 2.0, x0 + 2.0, z0, top)
+        window = _rounded(rect(ARCH_POST / 2, x0 - ARCH_POST / 2, z0 - 10.0, top - ARCH_BEAM), ARCH_WINDOW_R)
+        return s - window - window.mirror((1, 0))
+    if ARCH_STYLE == "bow":
+        s = rect(-x0 - 2.0, x0 + 2.0, z0, top)
+        return s - (circle(1.0, 0, 0, 96).scale((x0 - 3.0, top - ARCH_BEAM - z0)).translate((0, z0)))
+    if ARCH_STYLE == "truss":
+        w = 2.0
+        s = rect(-x0 - 2.0, x0 + 2.0, top - 4.0, top)
+        for sx in (1, -1):
+            s += hull2(circle(w, sx * (x0 - 1.0), top - 2.0), circle(w, sx * (x0 - 1.0 - (top - z0 - 2.0)), z0 + w - 0.5))
+        s += rect(-x0 - 2.0, x0 + 2.0, z0, z0 + 2.5)
+        return (s + horns).offset(3.0, JoinType.Round).offset(-3.0, JoinType.Round) ^ rect(-x0 - 2.0, x0 + 2.0, z0, top)
+    # rail
+    s = rect(-x0 - 2.0, x0 + 2.0, z0, z0 + 5.0) + horns
+    return s.offset(8.0, JoinType.Round).offset(-8.0, JoinType.Round) ^ rect(-x0 - 6.0, x0 + 6.0, z0, d.COLLAR_Z0 - 3.0)
+
+
+def _rounded(section, radius: float):
+    """断面の出っ張った角を半径 radius で丸める。"""
+    return section.offset(-radius, JoinType.Round).offset(radius, JoinType.Round)
+
+
+@lru_cache(maxsize=None)
+def deck_part() -> Manifold:
+    """デッキ。walker の形から、駆動輪とそのハブが通る所をすきま DECK_CLEAR で切り欠き、ヨークを受ける角を 4 本立てる。
+
+    角の先のツメを、ヨークの腕の角穴に下から差して「カチッ」と留める(オリジナルの Strider の側板の角と同じ)。
+    デッキ・歯車・ソケット枠・ヨークが 1 つのかたまりになり、裏返しても崩れない。
+    """
+    deck = d.deck_part()
+    # 外形の四隅を丸める(ツメは |y| 35 までなので、半径 DECK_ROUND なら削らない)
+    half_y = d.DECK_HALF_Y
+    outline = _rounded(rect(-d.PLATE_IN + 0.1, d.PLATE_IN - 0.1, -half_y, half_y), DECK_ROUND)
+    outline += rect(-d.PLATE_OUT - 10.0, -d.PLATE_IN + 0.2, -half_y, half_y) + rect(d.PLATE_IN - 0.2, d.PLATE_OUT + 10.0, -half_y, half_y)
+    deck ^= outline.extrude(60.0).translate((0, 0, d.DECK_Z0 - 1.0))
+    # 駆動輪とハブの切り欠き(内側の角を丸める)
+    tire_y = math.sqrt(WHEEL_R**2 - d.DECK_Z0**2) + DECK_CLEAR
+    hub_y = base.HUB_R + 3.0
+    for sx in (1, -1):
+        cut = rect(DRIVE_X0 - DECK_CLEAR, DRIVE_X1 + DECK_CLEAR, -tire_y, tire_y) + rect(DRIVE_HUB_X0 - DECK_CLEAR, DRIVE_X1 + DECK_CLEAR, -hub_y, hub_y)
+        cut = _rounded(cut, SLOT_ROUND)
+        deck -= (cut if sx > 0 else cut.mirror((1, 0))).extrude(d.DECK_Z1 - d.DECK_Z0 + 2.0).translate((0, 0, d.DECK_Z0 - 1.0))
+    # 角: 横から見て上の角を丸め、上から見て両端を丸める(上面はヨークの腕が載るので平ら)
+    side = _rounded(rect(HORN_X[0], HORN_X[1], d.DECK_Z1 - 10.0, d.COLLAR_Z0), HORN_ROUND) ^ rect(HORN_X[0], HORN_X[1], d.DECK_Z1 - 0.01, d.COLLAR_Z0)
+    tenon = d._snap_tenon(d.TENON_W, d.COLLAR_LUG_T, 11.0) ^ rect(-d.TENON_W, d.TENON_W, -1.0, d.COLLAR_LUG_T + HORN_TIP)
+    side += tenon.translate((HORN_TX, d.COLLAR_Z0))
+    side -= rect(HORN_TX - 0.8, HORN_TX + 0.8, d.COLLAR_Z0 - HORN_FLEX, d.COLLAR_Z0 + 0.01)
+    plan = _rounded(rect(HORN_X[0], HORN_X[1], -HORN_T / 2, HORN_T / 2), HORN_T / 2 - 0.01)
+    plan += rect(HORN_TX - d.TENON_W, HORN_TX + d.TENON_W, -HORN_T / 2, HORN_T / 2)  # ツメの所は角を残す(角穴に合わせる)
+    horn = apply(side.extrude(HORN_T), _XZ_TO_XYZ).translate((0, -HORN_T / 2, 0)) ^ plan.extrude(60.0).translate((0, 0, d.DECK_Z1 - 1.0))
+    # 前と後ろのアーチ: 左右の角をターンテーブルの下でつなぐ。窓は 2 つで、上の角を丸める
+    arch = apply(_arch_section().extrude(HORN_T), _XZ_TO_XYZ).translate((0, -HORN_T / 2, 0))
+    for sy in (1, -1):
+        deck += arch.translate((0, sy * HORN_Y, 0))
+        for sx in (1, -1):
+            h = horn if sx > 0 else horn.mirror((1, 0, 0))
+            deck += h.translate((0, sy * HORN_Y, 0))
+    return deck
+
+
+@lru_cache(maxsize=None)
+def yoke_part() -> Manifold:
+    """ヨーク。walker の形の 4 本の腕に、デッキの角のツメが下から入る角穴をあける。
+
+    ヨークはデッキの角で留まるので、側板に差すツメは削る(側板をはめるときに力がかかって耳が折れるのを防ぐ)。
+    """
+    edge = d.PLATE_IN - 0.1
+    yoke = d.yoke_part() ^ box(-edge, edge, -100.0, 100.0, -100.0, 200.0)
+    hx, hy = d.TENON_W / 2 + HORN_SLOT_FIT, HORN_T / 2 + HORN_SLOT_FIT
+    for sx in (1, -1):
+        for sy in (1, -1):
+            x, y = sx * HORN_TX, sy * HORN_Y
+            yoke -= box(x - hx, x + hx, y - hy, y + hy, d.COLLAR_Z0 - 1.0, d.COLLAR_Z0 + d.COLLAR_LUG_T + 1.0)
+    return yoke
 
 
 # ---------------------------------------------------------------- 部品表と姿勢
-REUSED = ("deck", "gear_table", "socket_frame", "pinion", "sleeve")
+REUSED = ("gear_table", "socket_frame")
 SC_PARTS = ("sc_base", "sc_servo", "sc_head", "sc_core", "sc_face", "sc_eyes")
-CLIPS = 5  # レバーのピンと押し板、押し板と足の腕、足の腕の軸、補助輪 2 個
+CLIPS = 6  # レバーのピンと押し板、押し板と足の腕、足の腕の軸の棒の両端、補助輪 2 個
 
 
 def part_defs() -> dict[str, PartDef]:
     c = COLORS
     base_defs = base.part_defs()
     defs = [
-        PartDef("rail_R", "右の側板(前に補助輪、足の腕の軸の穴)", rail_r_part, c["gray"], 1),
-        PartDef("rail_L", "左の側板(後ろに補助輪)", rail_l_part, c["gray"], 1),
-        PartDef("yoke", "ヨーク(walker と同じ)", d.yoke_part, c["gray"], 1),
-        PartDef("wheel_drive_shaft", "右の駆動輪と六角シャフトの一体(trike と同じ)", trike.wheel_drive_shaft_part, c["black"], 1),
-        PartDef("wheel_drive", "左の駆動輪(六角穴。trike の 1 回目と同じ)", wheel_drive_part, c["black"], 1),
+        PartDef("rail_R", "右の側板(前に補助輪)", rail_r_part, c["gray"], 1),
+        PartDef("rail_L", "左の側板(後ろに補助輪、前に倒れ止めの脚)", rail_l_part, c["gray"], 1),
+        PartDef("yoke", "ヨーク(腕にデッキの角のツメの角穴。側板へのツメはなし)", yoke_part, c["gray"], 1),
+        PartDef("deck", "デッキ(駆動輪の所を切り欠き、ヨークを受ける角が 4 本)", deck_part, c["gray"], 1),
+        PartDef("pinion", "ピニオン(左の筒を切る)", pinion_part, c["gray"], 1),
+        PartDef("sleeve", "スリーブ(左右に 1 個ずつ)", sleeve_part, c["gray"], 2),
+        PartDef("shaft", "六角シャフト", shaft_part, c["gray"], 1),
+        PartDef("wheel_drive", "駆動輪(左右同じ。六角穴が貫通)", wheel_drive_part, c["black"], 2),
         PartDef("wheel_aux", "補助輪(trike と同じ。右前と左後ろ)", trike.wheel_aux_part, c["black"], 2),
         PartDef("lever_R", "頭の右のレバー", lever_r_part, c["red"], 1),
         PartDef("link", "押し板", link_part, c["red"], 1),
-        PartDef("foot", "足の腕(軸つき)", foot_part, c["red"], 1),
+        PartDef("foot", "足の腕(足の先と一体)", foot_part, c["red"], 1),
+        PartDef("hinge_rod", "足の腕の軸の棒", hinge_rod_part, c["red"], 1),
         PartDef("lego_pins_R", "LEGO Technic のピン(摩擦つき、2 ポッチ。用意する)", lambda: _lego_pins(1), "#d8d8d4", 1, printable=False),
     ]
     out = {p.key: p for p in defs}
@@ -342,17 +555,23 @@ def instances(drive: float = 0.0, head_pitch: float | None = None, with_stackcha
     table = rot_z(-drive)
     out += [Instance("gear_table", "gear_table", table, "table"), Instance("socket_frame", "socket_frame", table, "table")]
     spin = rot_x(drive)
-    out += [Instance(n, n, spin, "axle") for n in ("pinion", "sleeve")]
-    out.append(Instance("wheel_drive_shaft", "wheel_drive_shaft", translation(base.WHEEL_X0, 0, 0) @ spin, "axle"))
-    out.append(Instance("wheel_drive", "wheel_drive", translation(-base.WHEEL_X0, 0, 0) @ spin @ half_turn, "axle"))
+    out += [Instance(n, n, spin, "axle") for n in ("pinion", "shaft")]
+    out.append(Instance("sleeve_R", "sleeve", spin, "axle"))
+    out.append(Instance("sleeve_L", "sleeve", spin @ half_turn, "axle"))
+    out.append(Instance("wheel_drive_R", "wheel_drive", translation(DRIVE_X0, 0, 0) @ spin, "axle"))
+    out.append(Instance("wheel_drive_L", "wheel_drive", translation(-DRIVE_X0, 0, 0) @ spin @ half_turn, "axle"))
     for sx, tag in ((1, "R"), (-1, "L")):  # 補助輪は右前と左後ろ
         side = eye if sx > 0 else half_turn
         y = AUX["y"]  # 右は前。左は 180° 回すので後ろに来る
         out.append(Instance(f"wheel_aux_{tag}", "wheel_aux", side @ translation(d.PLATE_OUT + SEAT, y, AUX_Z), "chassis"))
         out.append(Instance(f"clip_aux_{tag}", "clip", side @ translation(d.PLATE_OUT + d.clip_seat(AUX_CLEAR), y, AUX_Z), "chassis"))
+    out.append(Instance("hinge_rod", "hinge_rod", eye, "chassis"))
+    rod_clip = d.PLATE_OUT + SEAT + d.clip_seat(0.2)
+    out.append(Instance("clip_hinge_R", "clip", translation(rod_clip, *HINGE), "chassis"))
+    out.append(Instance("clip_hinge_L", "clip", translation(-rod_clip, *HINGE) @ half_turn, "chassis"))
     phi = arm_angle(head_pitch)
-    out.append(Instance("foot", "foot", translation(0, PIVOT[0], PIVOT[1]) @ rot_x(phi), "lift"))
-    out.append(Instance("clip_pivot", "clip", translation(PIVOT_BOSS_X1 + SEAT + d.clip_seat(0.2), PIVOT[0], PIVOT[1]), "lift"))
+    swing = translation(0, *HINGE) @ rot_x(phi) @ translation(0, -HINGE[0], -HINGE[1])
+    out.append(Instance("foot", "foot", swing, "lift"))
     # 押し板は、下の穴が足の腕の耳のピンに、上の穴が P に合うように動く
     (py0, pz0), (iy0, iz0) = _link_ends()
     (py, pz), (iy, iz) = _pin(head_pitch), _arm_in(phi)
@@ -385,26 +604,33 @@ def placed(instance: Instance) -> Manifold:
 
 # build_car.py --one-color のプレート分け。1 枚目はピボットだけの部品、2 枚目は駆動部と車輪
 ONE_COLOR_PLATES = [("Pivot new parts", None),
-                    ("Drive and wheels", ["deck", "gear_table", "socket_frame", "pinion", "sleeve", "yoke", "wheel_drive_shaft", "wheel_drive", "wheel_aux"])]
+                    ("Drive and wheels", ["deck", "gear_table", "socket_frame", "pinion", "sleeve", "shaft", "yoke", "wheel_drive", "wheel_aux"])]
 ONE_COLOR_MARGIN = 10.0  # ベッドの端からの余白 [mm]
 
 PRINT_POSE_OVERRIDE = {
     "rail_R": ("X_UP", "内面を下(補助輪のピンを上へ立てる)", False),
     "rail_L": ("X_DOWN", "内面を下(補助輪のピンを上へ立てる)", False),
-    "wheel_drive_shaft": ("X_DOWN", "外の面を下、シャフトを立てる", False),
     "wheel_drive": ("X_DOWN", "外の面を下", False),
+    "pinion": ("X_DOWN", "背面を下、歯と筒を上", False),
+    "sleeve": ("X_UP", "内側の端を下(つばの斜面が下から広がる)", False),
+    "shaft": ("Z_UP", "六角の平らな面を下にして寝かせる", False),
+    "deck": ("Z_UP", "そのまま(ボスを上)", False),
     "wheel_aux": ("X_DOWN", "外の面を下", False),
     "lever_R": ("X_UP", "頭の側の面を下(ピンを上へ立てる)", False),
     "link": ("X_UP", "寝かせる", False),
-    "foot": ("X_UP", "内側の面を下(軸と耳のピンを上へ立てる)", False),
+    "foot": ("X_UP", "内側の面を下(軸の筒・足の先・耳のピンを上へ立てる)", False),
+    "hinge_rod": ("Z_UP", "平らに削った面を下にして寝かせる", False),
 }
 ENGLISH_NAMES = {
     "rail_R": "Side rail R", "rail_L": "Side rail L", "wheel_aux": "Training wheel",
-    "wheel_drive_shaft": "Drive wheel R + shaft", "wheel_drive": "Drive wheel L",
-    "lever_R": "Head lever R", "link": "Push link", "foot": "Foot arm",
+    "wheel_drive": "Drive wheel", "shaft": "Hex shaft", "sleeve": "Sleeve", "pinion": "Pinion", "deck": "Deck",
+    "lever_R": "Head lever R", "link": "Push link", "foot": "Foot arm", "hinge_rod": "Foot hinge rod",
 }
 
 FIT_CHECKS = [
+    ("yoke を 0.3 mm 右へずらすとデッキの角のツメに当たる(デッキとヨークがかたまりになる)", "yoke", "deck", (0.3, 0, 0)),
+    ("yoke を 0.3 mm 前へずらすとデッキの角のツメに当たる", "yoke", "deck", (0, 0.3, 0)),
+    ("yoke を 0.4 mm 上げるとツメの返しに掛かる(上へ抜けない)", "yoke", "deck", (0, 0, 0.4)),
     # (説明, 動かす部品, 止める部品, ずらす量 [mm])
     ("lever_R を 1.2 mm 上げるとヨークの耳に当たる(頭が上へ抜けない)", "lever_R", "yoke", (0, 0, 1.2)),
     ("lever_R を 0.8 mm 前へずらすとヨークの耳に当たる", "lever_R", "yoke", (0, 0.8, 0)),
@@ -412,9 +638,15 @@ FIT_CHECKS = [
     ("link を 0.5 mm 内へずらすとレバーのピンの段に当たる", "link", "lever_R", (-0.5, 0, 0)),
     ("link を 0.5 mm 内へずらすと足の腕の耳に当たる", "link", "foot", (-0.5, 0, 0)),
     ("link を 0.6 mm 外へずらすと耳のピンの C クリップに当たる", "link", "clip_in", (0.6, 0, 0)),
-    ("foot を 0.5 mm 外へずらすと側板の内面に当たる", "foot", "rail_R", (0.5, 0, 0)),
-    ("wheel_drive_shaft を 0.6 mm 内へずらすとハブが rail_R に当たる(車軸が左右に動かない)", "wheel_drive_shaft", "rail_R", (-0.6, 0, 0)),
-    ("wheel_drive を 0.6 mm 内へずらすとハブが rail_L に当たる", "wheel_drive", "rail_L", (0.6, 0, 0)),
+    ("foot を 0.5 mm 外へずらすと軸の筒が rail_R の内面に当たる", "foot", "rail_R", (0.5, 0, 0)),
+    ("hinge_rod を 0.5 mm 右へずらすと左の C クリップが rail_L に当たる", "hinge_rod", "clip_hinge_L", (0.5, 0, 0)),
+    ("hinge_rod を 0.5 mm 左へずらすと右の C クリップが rail_R に当たる", "hinge_rod", "clip_hinge_R", (-0.5, 0, 0)),
+    # 車軸が左右に動かない: ピニオン・駆動輪・スリーブが、左右の側板のあいだに並んで詰まっている
+    ("sleeve_R を 0.4 mm 外へずらすとつばが rail_R に当たる", "sleeve_R", "rail_R", (0.4, 0, 0)),
+    ("sleeve_L を 0.4 mm 外へずらすとつばが rail_L に当たる", "sleeve_L", "rail_L", (-0.4, 0, 0)),
+    ("sleeve_R を 0.3 mm 内へずらすと wheel_drive_R に当たる", "sleeve_R", "wheel_drive_R", (-0.3, 0, 0)),
+    ("wheel_drive_R を 0.4 mm 内へずらすとハブがピニオンに当たる", "wheel_drive_R", "pinion", (-0.4, 0, 0)),
+    ("wheel_drive_L を 0.4 mm 内へずらすとハブがピニオンの筒に当たる", "wheel_drive_L", "pinion", (0.4, 0, 0)),
 ]
 
 def _peak_torque_per_newton() -> float:
@@ -429,17 +661,36 @@ def _peak_torque_per_newton() -> float:
 
 
 # verify_car.py の力の表。足・地面を押す駆動輪の位置 (x, y) と、前後の支えの位置と浮き (x, y, 浮き)
-_FOOT = ((ARM_X[0] + ARM_X[1]) / 2, PIVOT[0] + ARM_FOOT[0])
+_FOOT = (FOOT_X[0], FOOT_Y)
 _AUX_X = d.PLATE_OUT + SEAT + AUX["w"] / 2
 _SUPPORTS = [(_AUX_X, AUX["y"], AUX["lift"]), (-_AUX_X, -AUX["y"], AUX["lift"])]  # 補助輪(右前、左後ろ)
 _RAIL_X = (d.PLATE_IN + d.PLATE_OUT) / 2
 _PHI_MAX = arm_angle(math.radians(NOD_RANGE[1]))
-_LOW_POINTS = [("右の側板の足の軸受け", _RAIL_X, PIVOT[0], PIVOT[1] - (HUB_R + 0.5) - GROUND_Z),
+_LOW_POINTS = [("足の腕の板の下", ARM_X[0], FOOT_Y, _turn((FOOT_Y, FOOT_Z0 + FOOT_RISE), _PHI_MAX)[1] - GROUND_Z),
                ("押し板の下の端", (LINK_X[0] + LINK_X[1]) / 2, _arm_in(_PHI_MAX)[0], _arm_in(_PHI_MAX)[1] - 4.5 - GROUND_Z)]
-_WHEEL_X = base.WHEEL_X0 + base.TIRE_W / 2
+_WHEEL_X = DRIVE_X0 + base.TIRE_W / 2
+
+
+def spin_ground(x: float, y: float) -> float:
+    """頭を上げきって旋回する姿勢で、車体の座標から見た地面の高さ [mm](直進のときの地面が 0、上が正)。
+
+    車体は 足・左の駆動輪・右前の補助輪 の 3 点で立つ(verify_car.statics と同じ平面)。
+    """
+    below = foot_drop(math.radians(NOD_RANGE[1])) + FOOT_CLEAR
+    pts = np.array([_FOOT, (-_WHEEL_X, 0.0), _SUPPORTS[0][:2]], float)
+    plane = np.linalg.solve(np.column_stack([pts, np.ones(3)]), np.array([-below, 0.0, _SUPPORTS[0][2]]))
+    return float(plane @ np.array([x, y, 1.0]))
+
+
+def skid_lift() -> float:
+    """倒れ止めの脚の先が、直進のとき地面から浮く量 [mm](刷った左の側板に合わせた固定の値)。"""
+    return SKID_LIFT
+
+
+_LOW_POINTS.append(("左前の倒れ止めの脚", -d.PLATE_OUT, SKID_Y, skid_lift()))
 STATICS = dict(
     cases=[
-        dict(name="頭を上げきって右の足を下ろす(うなずき 30°)", foot=_FOOT, wheel=(-_WHEEL_X, 0.0), lifted=(_WHEEL_X, 0.0), supports=_SUPPORTS,
+        dict(name="頭を上げきって足を下ろす(うなずき 30°)", foot=_FOOT, wheel=(-_WHEEL_X, 0.0), lifted=(_WHEEL_X, 0.0), supports=_SUPPORTS,
              low_points=_LOW_POINTS),
     ],
     foot_below_ground=lambda: foot_drop(math.radians(NOD_RANGE[1])) + FOOT_CLEAR,  # 端までうなずいたとき、足が地面の線より下がる量
