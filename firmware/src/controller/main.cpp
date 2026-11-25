@@ -1,5 +1,5 @@
 // 手もとのコントローラー。入力(input.h)を 0.05 秒ごとに読み、ESP-NOW でスタックチャンへ送る。
-// 入力は機器ごとに 1 つ: M5Stack StopWatch のタッチと傾き(input_stopwatch.cpp)。
+// 入力は機器ごとに 1 つ: M5Stack StopWatch のタッチと、黄・青のボタン(input_stopwatch.cpp)。
 #include <M5Unified.h>
 #include <Preferences.h>
 #include <WiFi.h>
@@ -142,7 +142,7 @@ void draw(const input::Reading& in) {
     input::debugText(left, right, sizeof(left));
     canvas.setTextColor(TFT_DARKGREY);
     const int margin = w > 200 ? w / 5 : 2;
-    canvas.drawString(left, margin, bottom);  // 向きを合わせるための値。左が X、右が Y
+    canvas.drawString(left, margin, bottom);  // ボタンの役目。左が黄、右が青
     canvas.drawRightString(right, w - margin, bottom);
     canvas.pushSprite(0, 0);
 }
@@ -231,7 +231,8 @@ void loop() {
             consecutiveFails = 0;
             nextChannel();
         }
-        send(peer, stick_link::Kind::Stick, x, y, in.stop ? stick_link::BUTTON_STOP : 0);
+        const uint8_t buttons = stick_link::packPresses(in.stop ? stick_link::BUTTON_STOP : 0, in.oncePresses, in.loopPresses);
+        send(peer, stick_link::Kind::Stick, x, y, buttons);
     } else {
         if (++pairSends >= PAIR_SENDS_PER_CHANNEL) {
             pairSends = 0;

@@ -5,6 +5,8 @@
 //    1. スマホのブラウザのジョイスティック。家の Wi-Fi 経由。触れている間は 0.1 秒ごとに値が来て、0.9 秒途切れたら止まる
 //    2. 手に持つコントローラー(M5Stack StopWatch)。ESP-NOW で直接つなぐ(espnow_pad.cpp)
 //  - うなずきは 0〜30° に必ず収める(car_control.h)
+//  - ボタンで回る: くるっと 1 回転、回り続ける(操作ページのボタン、StopWatch の黄・青)。spin_move.h
+//    回る前に「いくよ」を出して少しため、回っている間は目がぐるぐるになる。1 回転は頭のジャイロで数える(yaw_tracker.h)
 //  - 画面はスタックチャンの顔(m5stack-avatar)。走っている間に笑顔にするかは設定で選べる
 //  - はじめて起動すると設定用の Wi-Fi を出し、画面の QR をスマホで読んで家の Wi-Fi を設定する(StopWatch は設定前から使える)
 //
@@ -25,6 +27,9 @@
 #include "car_control.h"
 #include "espnow_pad.h"
 #include "pages.h"
+#include "spin_move.h"
+#include "spiral_eyes.h"
+#include "yaw_tracker.h"
 
 namespace {
 
@@ -39,6 +44,7 @@ constexpr int PITCH_SPEED = 700;  // movePitch の速さ(0〜1000)
 constexpr uint32_t YAW_READY_MS = 2000;  // 電源を入れてから、首のサーボのモードを切り替えるまで待つ時間
 constexpr uint32_t ATOM_TIMEOUT_MS = 500;  // Atom の値(0.05 秒ごと)がこの時間途切れたら止める
 constexpr uint32_t BUBBLE_MS = 3000;  // StopWatch がつながったときの吹き出しを出しておく時間
+constexpr float DIZZY_SWAY_RAD = 0.18f;  // 目が回ったときに顔を左右に揺らす大きさ
 const IPAddress SETUP_IP(192, 168, 4, 1);
 const char* const MDNS_NAME = "strider";
 
@@ -76,10 +82,21 @@ uint32_t confirmUntilMs = 0;  // 0 以外なら、この時刻まで「Wi-Fi の
 bool avatarRunning = false;
 uint32_t pairConfirmUntilMs = 0;  // 0 以外なら、この時刻まで「コントローラーを登録しますか」を表示している
 
+// ボタンで回る動きと、車体の向き
+spin::Mover mover;
+bool buttonSpinLeft = false;  // ボタンで回る向き(初期は右。右はデスクマットでもびっこを引かない)
+bool moverControlling = false;  // 前の loop() で、回る動きが首とうなずきを動かしていたか
+spin::Face faceShown = spin::Face::Normal;
+yaw::Integrator bodyYaw;  // 車体の向き [°](頭のジャイロ。頭は車体に留まっている)
+uint32_t imuMs = 0;
+uint32_t stillSinceMs = 0;  // 首を止めた時刻(止めてから少し待ってから、ジャイロのずれを見積もる)
+int driveApplied = 0x7fffffff;  // 最後に首へ送った速さ
+
 // ---------------------------------------------------------------- 走る・回る
 void applyDrive() {
     const int sign = invertDirection ? -1 : 1;
     M5StackChan.Motion.rotateX(sign * driveSigned * 10);  // 速さ % → -1000〜1000。0 で止まる
+    driveApplied = driveSigned;
 }
 
 // うなずきを目標の角度へ。小さな変化と、短い間隔での連続の命令は送らない(サーボの通信を詰まらせない)
@@ -117,6 +134,13 @@ void setControl(int x, int y, Source source) {
     stickX = constrain(x, -100, 100);
     stickY = constrain(y, -100, 100);
     activeSource = (stickX == 0 && stickY == 0) ? Source::None : source;
+    const bool moved = abs(stickX) > car::DEAD_ZONE || abs(stickY) > car::DEAD_ZONE;
+    if (moved && (mover.phase() == spin::Phase::Ready || mover.phase() == spin::Phase::Turning)) {
+        mover.cancel();  // 回っている間にスティックを動かしたら、スティックの操作に戻る
+    }
+    if (moverControlling && mover.phase() != spin::Phase::Idle && mover.phase() != spin::Phase::Dizzy) {
+        return;  // 回っている間は、スティックの値(中心)で止めない
+    }
     updateTargets();
     applyDrive();
     updatePitch(millis());
@@ -124,6 +148,102 @@ void setControl(int x, int y, Source source) {
 }
 
 void stopControl() { setControl(0, 0, Source::None); }
+
+// ボタンで回るときの設定。右回りはスティックを右へ倒したときと同じ(前進)。「回る向きを入れ替える」も同じように効く
+spin::Settings spinSettings() {
+    spin::Settings settings;
+    const int direction = (buttonSpinLeft ? -1 : 1) * (spinReversed ? -1 : 1);
+    settings.drive = direction * speedMax;
+    settings.pitch = spinDeg;
+    return settings;
+}
+
+void showFace();
+
+// ボタンで回る動きを始める前に、操作ページの QR などを閉じて顔を出す
+void prepareSpin() {
+    if (qrUntilMs) {
+        showFace();
+    }
+}
+
+void spinOnce(uint32_t now) {
+    prepareSpin();
+    mover.startOnce(now, spinSettings());
+}
+
+void spinLoopToggle(uint32_t now) {
+    prepareSpin();
+    mover.toggleLoop(now, spinSettings());
+}
+
+// 顔を、回る動きの段階に合わせる(いくよ、ぐるぐる、目が回った)
+void applySpinFace(spin::Face face, uint32_t now) {
+    if (!avatarRunning) {
+        faceShown = spin::Face::Normal;
+        return;
+    }
+    if (face == spin::Face::Dizzy) {
+        avatar.setRotation(DIZZY_SWAY_RAD * std::sin(static_cast<float>(now) / 120.0f));
+    }
+    if (face == faceShown) {
+        return;
+    }
+    faceShown = face;
+    switch (face) {
+        case spin::Face::Ready:
+            spiral_eyes::apply(avatar, 0);
+            avatar.setSpeechText("いくよ!");
+            break;
+        case spin::Face::Spiral:
+            spiral_eyes::apply(avatar, 1);
+            avatar.setSpeechText("");
+            break;
+        case spin::Face::Dizzy:
+            spiral_eyes::apply(avatar, 2);
+            avatar.setSpeechText("めがまわる〜");
+            break;
+        case spin::Face::Normal:
+            spiral_eyes::apply(avatar, 0);
+            avatar.setRotation(0);
+            avatar.setSpeechText("");
+            break;
+    }
+}
+
+// 車体の向きを更新する。首を止めてから 1 秒たった間は、ジャイロのゼロ点のずれも見積もる
+void updateYaw(uint32_t now) {
+    if (driveApplied != 0) {
+        stillSinceMs = now;
+    }
+    if (!M5.Imu.update()) {
+        return;
+    }
+    float gx, gy, gz, ax, ay, az;
+    M5.Imu.getGyro(&gx, &gy, &gz);
+    M5.Imu.getAccel(&ax, &ay, &az);
+    if (imuMs) {
+        const bool still = driveApplied == 0 && now - stillSinceMs > 1000;
+        bodyYaw.add(yaw::verticalRate(gx, gy, gz, ax, ay, az), static_cast<float>(now - imuMs) / 1000.0f, still);
+    }
+    imuMs = now;
+}
+
+// 回る動きを進め、首とうなずきに渡す。回る動きが終わったら、スティックの値に戻す
+void updateSpin(uint32_t now) {
+    const spin::Output out = mover.update(now, bodyYaw.angle());
+    if (out.controls) {
+        driveSigned = out.drive;
+        pitchTarget = out.pitch;
+    } else if (moverControlling) {
+        updateTargets();
+    }
+    moverControlling = out.controls;
+    if (driveSigned != driveApplied) {
+        applyDrive();
+    }
+    applySpinFace(out.face, now);
+}
 
 // StopWatch のスティックが倒れている間は、スマホからの値を受け付けない
 bool atomIsSteering() {
@@ -291,11 +411,14 @@ void restoreScreen() {
 
 // ---------------------------------------------------------------- ページと API
 void sendJsonState() {
-    char json[256];
+    char json[400];
     snprintf(json, sizeof(json),
-             "{\"drive\":%d,\"pitch\":%.1f,\"rev\":%d,\"spin\":%.1f,\"vmax\":%d,\"invert\":%d,\"smile\":%d,\"volt\":%.2f,\"atomBusy\":%d,\"atom\":%d}",
+             "{\"drive\":%d,\"pitch\":%.1f,\"rev\":%d,\"spin\":%.1f,\"vmax\":%d,\"invert\":%d,\"smile\":%d,\"volt\":%.2f,\"atomBusy\":%d,\"atom\":%d,"
+             "\"move\":%d,\"loop\":%d,\"bleft\":%d,\"turned\":%.0f,\"timeout\":%d,\"yaw\":%.1f,\"bias\":%.2f}",
              driveSigned, pitchTarget, spinReversed ? 1 : 0, spinDeg, speedMax, invertDirection ? 1 : 0, smileWhileWalking ? 1 : 0,
-             M5StackChan.getBatteryVoltage(), atomIsSteering() ? 1 : 0, static_cast<int>(atomState));
+             M5StackChan.getBatteryVoltage(), atomIsSteering() ? 1 : 0, static_cast<int>(atomState), static_cast<int>(mover.phase()),
+             mover.kind() == spin::Kind::Loop ? 1 : 0, buttonSpinLeft ? 1 : 0, mover.turned(), mover.timedOut() ? 1 : 0, bodyYaw.angle(),
+             bodyYaw.bias());
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", json);
 }
@@ -319,7 +442,26 @@ void handleStop() {
     if (server.hasArg("s")) {
         stoppedPress = server.arg("s");
     }
+    mover.stop(millis());
     stopControl();
+    sendJsonState();
+}
+
+// ボタンで回る: m = once(くるっと 1 回転)/ loop(回り続ける。回っていれば止める)/ stop。left = ボタンで回る向き(0 = 右、1 = 左)
+void handleSpin() {
+    const uint32_t now = millis();
+    if (server.hasArg("left")) {
+        buttonSpinLeft = server.arg("left").toInt() != 0;
+        prefs.putBool("bleft", buttonSpinLeft);
+    }
+    const String move = server.arg("m");
+    if (move == "once") {
+        spinOnce(now);
+    } else if (move == "loop") {
+        spinLoopToggle(now);
+    } else if (move == "stop") {
+        mover.stop(now);
+    }
     sendJsonState();
 }
 
@@ -416,6 +558,7 @@ void startServer() {
         });
         server.on("/api/joy", handleJoy);
         server.on("/api/stop", handleStop);
+        server.on("/api/spin", handleSpin);
         server.on("/api/state", sendJsonState);
         server.on("/api/tune", handleTune);
         server.on("/api/atom/forget", handleAtomForget);
@@ -484,6 +627,7 @@ void startReadyMode() {
 void setup() {
     M5StackChan.begin();
     M5.Display.setBrightness(120);
+    avatar.setSpeechFont(&fonts::lgfxJapanGothic_16);
     Serial.begin(115200);
     Serial.printf("[strider] board=%d rotation=%d width=%d height=%d\n", static_cast<int>(M5.getBoard()),
                   M5.Display.getRotation(), M5.Display.width(), M5.Display.height());
@@ -497,6 +641,7 @@ void setup() {
     invertDirection = prefs.getBool("invert", false);
     smileWhileWalking = prefs.getBool("smile", false);
     spinReversed = prefs.getBool("rev", false);
+    buttonSpinLeft = prefs.getBool("bleft", false);
     spinDeg = car::clampSpinPitch(prefs.getInt("spin", static_cast<int>(std::lround(car::PITCH_MAX_DEG * 10))) / 10.0f);
     speedMax = car::clampSpeedMax(prefs.getInt("vmax", car::SPEED_MAX));
     pitchTarget = car::LEVEL_DEG;
@@ -560,9 +705,20 @@ void handleAtom(uint32_t now) {
             restoreScreen();  // StopWatch が切れたら、Wi-Fi の設定の画面に戻す
         }
     }
+    uint8_t once = 0, loopPresses = 0;
+    espnow_pad::takePresses(once, loopPresses);
+    if (once) {
+        spinOnce(now);
+    }
+    for (uint8_t i = 0; i < loopPresses; i++) {
+        spinLoopToggle(now);
+    }
     int x = 0, y = 0;
     bool stop = false;
     if (espnow_pad::takeStick(x, y, stop)) {
+        if (stop) {
+            mover.stop(now);
+        }
         if (stop) {
             x = y = 0;
         }
@@ -581,6 +737,8 @@ void loop() {
     server.handleClient();
     const uint32_t now = millis();
     handleAtom(now);
+    updateYaw(now);
+    updateSpin(now);
     updatePitch(now);
 
     if (mode == Mode::Setup) {
@@ -622,7 +780,11 @@ void loop() {
                 showFace();
             }
         } else if (!restartAtMs && !pairConfirmUntilMs) {
-            if (M5StackChan.TouchSensor.pressedFor(FORGET_HOLD_MS) && !holdHandled) {
+            const bool spinning = mover.phase() == spin::Phase::Ready || mover.phase() == spin::Phase::Turning;
+            if (spinning && M5StackChan.TouchSensor.wasPressed()) {
+                holdHandled = true;  // 回っている間に頭をさわったら止める(離したときに QR は出さない)
+                mover.stop(now);
+            } else if (M5StackChan.TouchSensor.pressedFor(FORGET_HOLD_MS) && !holdHandled) {
                 holdHandled = true;
                 stopControl();
                 showForgetConfirm();

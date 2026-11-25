@@ -33,6 +33,12 @@ State state(uint32_t now);
  */
 bool takeStick(int& x, int& y, bool& stop);
 
+/**
+ * 前回呼んでから、コントローラーのボタンが押された回数を取り出す(StopWatch の黄 = once、青 = loop)。
+ * つながった直後とコントローラーの再起動のあとは、その時の回数を数え始めとし、押されたとはみなさない。
+ */
+void takePresses(uint8_t& once, uint8_t& loop);
+
 /** 最後に値が届いた時刻 [ms](まだなら 0)。 */
 uint32_t lastStickMs();
 

@@ -89,6 +89,19 @@ void test_short_id_is_last_two_bytes() {
     TEST_ASSERT_EQUAL_HEX16(0x1a2b, shortId(mac));
 }
 
+void test_press_counts_keep_stop_bit_and_wrap() {
+    uint8_t b = packPresses(BUTTON_STOP, 3, 2);
+    TEST_ASSERT_EQUAL_UINT8(BUTTON_STOP, b & BUTTON_STOP);
+    TEST_ASSERT_EQUAL_UINT8(3, onceCount(b));
+    TEST_ASSERT_EQUAL_UINT8(2, loopCount(b));
+    b = packPresses(b, 4, 5);  // 下 2 ビットだけ送る
+    TEST_ASSERT_EQUAL_UINT8(0, onceCount(b));
+    TEST_ASSERT_EQUAL_UINT8(1, loopCount(b));
+    TEST_ASSERT_EQUAL_UINT8(1, pressesSince(3, 0));  // 3 → 0 は 1 回
+    TEST_ASSERT_EQUAL_UINT8(0, pressesSince(2, 2));  // 同じ値が何回届いても動かない
+    TEST_ASSERT_EQUAL_UINT8(2, pressesSince(1, 3));  // 間のパケットが落ちても数える
+}
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_round_trip);
@@ -100,5 +113,6 @@ int main() {
     RUN_TEST(test_pair_request_decision);
     RUN_TEST(test_controller_accepts_ack_only_when_unpaired_and_near);
     RUN_TEST(test_short_id_is_last_two_bytes);
+    RUN_TEST(test_press_counts_keep_stop_bit_and_wrap);
     return UNITY_END();
 }
