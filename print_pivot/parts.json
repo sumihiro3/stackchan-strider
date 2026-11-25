@@ -38,17 +38,17 @@
   },
   {
    "key": "yoke",
-   "label": "ヨーク(walker と同じ)",
+   "label": "ヨーク(腕にデッキの角のツメの角穴。側板へのツメはなし)",
    "color": "red",
    "count": 1,
    "size_mm": [
-    106.8,
+    90.8,
     89.4,
     59.6
    ],
-   "volume_cm3": 20.86,
+   "volume_cm3": 19.75,
    "overhang_mm2": 43.7,
-   "bed_mm2": 1521.2,
+   "bed_mm2": 1242.7,
    "orientation": "カラーを下、パッドを上",
    "support": false,
    "watertight": true,
@@ -56,17 +56,17 @@
   },
   {
    "key": "deck",
-   "label": "デッキ(駆動輪の所を切り欠く)",
+   "label": "デッキ(駆動輪の所を切り欠き、ヨークを受ける角が 4 本)",
    "color": "red",
    "count": 1,
    "size_mm": [
     106.8,
     74.0,
-    23.0
+    31.1
    ],
-   "volume_cm3": 14.22,
-   "overhang_mm2": 0.0,
-   "bed_mm2": 3772.1,
+   "volume_cm3": 23.66,
+   "overhang_mm2": 59.3,
+   "bed_mm2": 3532.4,
    "orientation": "そのまま(ボスを上)",
    "support": false,
    "watertight": true,
@@ -100,7 +100,7 @@
     18.0,
     11.0
    ],
-   "volume_cm3": 1.2,
+   "volume_cm3": 1.22,
    "overhang_mm2": 0.0,
    "bed_mm2": 68.9,
    "orientation": "内側の端を下(つばの斜面が下から広がる)",
@@ -115,12 +115,12 @@
    "count": 1,
    "size_mm": [
     100.8,
-    9.0,
-    7.8
+    9.5,
+    8.0
    ],
-   "volume_cm3": 5.31,
+   "volume_cm3": 5.34,
    "overhang_mm2": 0.0,
-   "bed_mm2": 453.9,
+   "bed_mm2": 456.9,
    "orientation": "六角の平らな面を下にして寝かせる",
    "support": false,
    "watertight": true,
@@ -136,9 +136,9 @@
     60.0,
     17.1
    ],
-   "volume_cm3": 19.15,
-   "overhang_mm2": 47.8,
-   "bed_mm2": 1959.0,
+   "volume_cm3": 19.1,
+   "overhang_mm2": 44.9,
+   "bed_mm2": 1953.4,
    "orientation": "外の面を下",
    "support": false,
    "watertight": true,
@@ -333,7 +333,7 @@
     "rail_L": 1,
     "rail_R": 1,
     "deck": 1,
-    "yoke": 1,
+    "socket_frame": 1,
     "pinion": 1,
     "shaft": 1,
     "sleeve": 2,
@@ -347,7 +347,7 @@
    "support": false,
    "parts": 1,
    "contents": {
-    "socket_frame": 1
+    "yoke": 1
    }
   },
   {

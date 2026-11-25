@@ -22,7 +22,7 @@ import math
 from functools import lru_cache
 
 import numpy as np
-from manifold3d import Manifold
+from manifold3d import JoinType, Manifold
 
 import car_design as base
 import trike_design as trike
@@ -127,7 +127,28 @@ AXLE_GAP = 0.2  # ピニオンの背面と駆動輪のハブのすきま
 DRIVE_X0 = d.GEAR_BACK + AXLE_GAP + (base.WHEEL_X0 - base.HUB_X0)  # 駆動輪の内面 |x|(ハブは内面から 7.1 mm 内へ出る)
 DRIVE_X1 = DRIVE_X0 + base.TIRE_W
 SLEEVE_X0 = DRIVE_X1 + 0.1  # スリーブの内端
-SHAFT_HALF = d.L0 - 0.3  # シャフトの端 |x|(スリーブの外端の手前)
+SHAFT_HALF = d.L0 - 0.3
+DRIVE_HUB_X0 = d.GEAR_BACK + AXLE_GAP  # 駆動輪のハブの内側の端 |x|
+GRIP_AF = 8.2  # シャフトの太い所の二面幅(穴 8.3 とのすきま 0.1。car の後輪の圧入と同じすきま)
+GRIP_LEN = 3.0  # 太い所の長さ = 車輪をきつく押す距離
+GRIP_LEAD = 0.5  # 太い所の入口の斜面の長さ
+SLEEVE_GRIP = 3.0  # スリーブの穴の、外寄りの細い所の長さ
+DECK_CLEAR = 2.0  # デッキの切り欠きと、駆動輪・ハブのすきま
+# デッキの角(オリジナルの側板の角と同じ留め方): ヨークの腕の下に立つ板と、先の 2 本爪のツメ
+HORN_X = (30.0, d.PLATE_IN - 0.2)  # 板の x の範囲(ターンテーブル歯車の外、側板の内面の手前)
+HORN_Y = 33.0  # 板の厚みの中心 |y|(タイヤの上を避ける。ヨークの腕 y 27〜37 の中)
+HORN_T = 5.0  # 板の厚み(オリジナルの側板と同じ)
+HORN_TX = 37.5  # ツメの中心 |x|
+HORN_FLEX = 5.0  # ツメの割りを板へ延ばす長さ(返しが穴を通るときに、爪がたわむ)
+HORN_SLOT_FIT = 0.2  # ヨークの角穴のすきま(片側)
+DECK_ROUND = 2.0  # デッキの外形の四隅の丸み
+SLOT_ROUND = 2.0  # 切り欠きの角の丸み
+HORN_ROUND = 3.0  # 角を横から見た上の角の丸み
+ARCH_TABLE_GAP = 2.0  # アーチの上面と、ターンテーブル円板の下面のすきま
+ARCH_BEAM = 5.0  # アーチの上の梁の高さ
+ARCH_POST = 5.0  # アーチの真ん中の柱の幅
+ARCH_WINDOW_R = 7.0  # 窓の上の角の丸み(刷るときの橋渡しを短くする)
+HORN_TIP = 1.7  # ツメの先の長さ(腕の上面から)。右後ろのツメの先が、うなずき 30° で押し板に当たらない長さに切る
 
 EXTRA_MASSES: list = []
 
@@ -357,18 +378,31 @@ def _lego_pins(sx: int) -> Manifold:
 
 @lru_cache(maxsize=None)
 def wheel_drive_part() -> Manifold:
-    """駆動輪(左右同じ。ローカルは trike の駆動輪と同じ: 軸 = X、内面 x = 0)。六角穴は貫通で、外寄り TIGHT_X だけ圧入する。"""
-    loose = d.SHAFT_AF + d.SHAFT_BORE_CLEARANCE
-    lead = Manifold.batch_hull([base._hex_bore_x(base.WHEEL_SOCKET_AF + 2 * base.WHEEL_SOCKET_LEAD, base.TIGHT_X[0] - 0.01, base.TIGHT_X[0]),
-                                base._hex_bore_x(base.WHEEL_SOCKET_AF, base.TIGHT_X[0] + base.WHEEL_SOCKET_LEAD, base.TIGHT_X[0] + base.WHEEL_SOCKET_LEAD + 0.01)])
-    wheel = trike._drive_wheel_body() - base._hex_bore_x(loose, -20.0, base.TIGHT_X[0]) - lead
-    return wheel - base._hex_bore_x(base.WHEEL_SOCKET_AF, base.TIGHT_X[0], base.TIRE_W + 1.0)
+    """駆動輪(左右同じ。ローカルは trike の駆動輪と同じ: 軸 = X、内面 x = 0)。六角穴は貫通で、全長をピニオンと同じすきまにする。
+
+    シャフトの端から車輪の位置まで 10 mm 以上すべらせるので、圧入にすると押し込めない(実物で確かめた)。
+    車輪はピニオンとスリーブに左右から挟まれて動かないので、圧入は要らない。
+    """
+    return trike._drive_wheel_body() - base._hex_bore_x(d.SHAFT_AF + d.SHAFT_BORE_CLEARANCE, -20.0, base.TIRE_W + 1.0)
 
 
 @lru_cache(maxsize=None)
 def shaft_part() -> Manifold:
-    """六角シャフト。左のスリーブから右のスリーブまで通り、ピニオン・駆動輪・スリーブを貫く。寝かせて刷る。"""
-    return base._hex_bore_x(base.SHAFT_ACTUAL_AF, -SHAFT_HALF, SHAFT_HALF)
+    """六角シャフト。左のスリーブから右のスリーブまで通り、ピニオン・駆動輪・スリーブを貫く。寝かせて刷る。
+
+    駆動輪のハブの内側の端が来る所(|x| = DRIVE_HUB_X0 から GRIP_LEN)だけ、少し太くする。
+    車輪は最後の GRIP_LEN だけきつくなって止まり、ピニオンと車輪が 1 本のかたまりになる(組むときに崩れない)。
+    太い所は下の平らな面からは出さない(寝かせて刷るとき、シャフト全体がベッドに着くように)。
+    """
+    shaft = base._hex_bore_x(base.SHAFT_ACTUAL_AF, -SHAFT_HALF, SHAFT_HALF)
+    bottom = -base.SHAFT_ACTUAL_AF / 2
+    for sx in (1, -1):
+        x0, x1 = DRIVE_HUB_X0, DRIVE_HUB_X0 + GRIP_LEN
+        grip = base._hex_bore_x(GRIP_AF, x0, x1) + Manifold.batch_hull(
+            [base._hex_bore_x(GRIP_AF, x1 - 0.01, x1), base._hex_bore_x(base.SHAFT_ACTUAL_AF, x1 + GRIP_LEAD, x1 + GRIP_LEAD + 0.01)])
+        grip = grip.trim_by_plane((0, 0, 1), bottom)
+        shaft += grip if sx > 0 else grip.mirror((1, 0, 0))
+    return shaft
 
 
 @lru_cache(maxsize=None)
@@ -380,20 +414,99 @@ def pinion_part() -> Manifold:
 @lru_cache(maxsize=None)
 def sleeve_part() -> Manifold:
     """スリーブ(右の向き。左は 180° 回して使う)。walker の形の外寄りだけ。つばが側板の内面に当たり、駆動輪の外面を受ける。"""
-    return d.sleeve_part().trim_by_plane((1, 0, 0), SLEEVE_X0)
+    sleeve = d.sleeve_part().trim_by_plane((1, 0, 0), SLEEVE_X0)
+    # 外寄り SLEEVE_GRIP だけ穴を細くする。シャフトの先が入るのは最後の約 2.7 mm だけなので押し込める
+    x1 = d.L0
+    x0 = x1 - SLEEVE_GRIP
+    ring = base._hex_bore_x(d.SHAFT_AF + d.SHAFT_BORE_CLEARANCE + 0.6, x0, x1 - 0.01)
+    lead = Manifold.batch_hull([base._hex_bore_x(d.SHAFT_AF + d.SHAFT_BORE_CLEARANCE, x0 - 0.01, x0),
+                                base._hex_bore_x(base.WHEEL_SOCKET_AF, x0 + GRIP_LEAD, x0 + GRIP_LEAD + 0.01)])
+    return sleeve + (ring - lead - base._hex_bore_x(base.WHEEL_SOCKET_AF, x0, x1 + 1.0))
+
+
+ARCH_STYLE = "rail"  # 前後のつなぎの形: windows(窓 2 つ) / bow(弓) / truss(斜めの支え) / rail(低い手すり)
+
+
+def _arch_section():
+    """前後で左右の角をつなぐ板の、x–z の断面。角との境目のへこんだ角は丸める。"""
+    z0, top, x0 = d.DECK_Z1 - 0.01, d.TABLE_Z0 - ARCH_TABLE_GAP, HORN_X[0]
+    horns = rect(x0, x0 + 6.0, z0, d.COLLAR_Z0) + rect(-x0 - 6.0, -x0, z0, d.COLLAR_Z0)
+    if ARCH_STYLE == "windows":
+        s = rect(-x0 - 2.0, x0 + 2.0, z0, top)
+        window = _rounded(rect(ARCH_POST / 2, x0 - ARCH_POST / 2, z0 - 10.0, top - ARCH_BEAM), ARCH_WINDOW_R)
+        return s - window - window.mirror((1, 0))
+    if ARCH_STYLE == "bow":
+        s = rect(-x0 - 2.0, x0 + 2.0, z0, top)
+        return s - (circle(1.0, 0, 0, 96).scale((x0 - 3.0, top - ARCH_BEAM - z0)).translate((0, z0)))
+    if ARCH_STYLE == "truss":
+        w = 2.0
+        s = rect(-x0 - 2.0, x0 + 2.0, top - 4.0, top)
+        for sx in (1, -1):
+            s += hull2(circle(w, sx * (x0 - 1.0), top - 2.0), circle(w, sx * (x0 - 1.0 - (top - z0 - 2.0)), z0 + w - 0.5))
+        s += rect(-x0 - 2.0, x0 + 2.0, z0, z0 + 2.5)
+        return (s + horns).offset(3.0, JoinType.Round).offset(-3.0, JoinType.Round) ^ rect(-x0 - 2.0, x0 + 2.0, z0, top)
+    # rail
+    s = rect(-x0 - 2.0, x0 + 2.0, z0, z0 + 5.0) + horns
+    return s.offset(8.0, JoinType.Round).offset(-8.0, JoinType.Round) ^ rect(-x0 - 6.0, x0 + 6.0, z0, d.COLLAR_Z0 - 3.0)
+
+
+def _rounded(section, radius: float):
+    """断面の出っ張った角を半径 radius で丸める。"""
+    return section.offset(-radius, JoinType.Round).offset(radius, JoinType.Round)
 
 
 @lru_cache(maxsize=None)
 def deck_part() -> Manifold:
-    """デッキ。walker の形から、駆動輪とそのハブが通る所を切り欠く。"""
+    """デッキ。walker の形から、駆動輪とそのハブが通る所をすきま DECK_CLEAR で切り欠き、ヨークを受ける角を 4 本立てる。
+
+    角の先のツメを、ヨークの腕の角穴に下から差して「カチッ」と留める(オリジナルの Strider の側板の角と同じ)。
+    デッキ・歯車・ソケット枠・ヨークが 1 つのかたまりになり、裏返しても崩れない。
+    """
     deck = d.deck_part()
-    tire_y = math.sqrt(WHEEL_R**2 - d.DECK_Z0**2) + 1.0
+    # 外形の四隅を丸める(ツメは |y| 35 までなので、半径 DECK_ROUND なら削らない)
+    half_y = d.DECK_HALF_Y
+    outline = _rounded(rect(-d.PLATE_IN + 0.1, d.PLATE_IN - 0.1, -half_y, half_y), DECK_ROUND)
+    outline += rect(-d.PLATE_OUT - 10.0, -d.PLATE_IN + 0.2, -half_y, half_y) + rect(d.PLATE_IN - 0.2, d.PLATE_OUT + 10.0, -half_y, half_y)
+    deck ^= outline.extrude(60.0).translate((0, 0, d.DECK_Z0 - 1.0))
+    # 駆動輪とハブの切り欠き(内側の角を丸める)
+    tire_y = math.sqrt(WHEEL_R**2 - d.DECK_Z0**2) + DECK_CLEAR
     hub_y = base.HUB_R + 3.0
     for sx in (1, -1):
-        for x0, x1, half_y in ((DRIVE_X0 - 1.0, DRIVE_X1 + 1.0, tire_y), (d.GEAR_BACK - 0.3, DRIVE_X1 + 1.0, hub_y)):
-            lo, hi = sorted((sx * x0, sx * x1))
-            deck -= box(lo, hi, -half_y, half_y, d.DECK_Z0 - 1.0, d.DECK_Z1 + 1.0)
+        cut = rect(DRIVE_X0 - DECK_CLEAR, DRIVE_X1 + DECK_CLEAR, -tire_y, tire_y) + rect(DRIVE_HUB_X0 - DECK_CLEAR, DRIVE_X1 + DECK_CLEAR, -hub_y, hub_y)
+        cut = _rounded(cut, SLOT_ROUND)
+        deck -= (cut if sx > 0 else cut.mirror((1, 0))).extrude(d.DECK_Z1 - d.DECK_Z0 + 2.0).translate((0, 0, d.DECK_Z0 - 1.0))
+    # 角: 横から見て上の角を丸め、上から見て両端を丸める(上面はヨークの腕が載るので平ら)
+    side = _rounded(rect(HORN_X[0], HORN_X[1], d.DECK_Z1 - 10.0, d.COLLAR_Z0), HORN_ROUND) ^ rect(HORN_X[0], HORN_X[1], d.DECK_Z1 - 0.01, d.COLLAR_Z0)
+    tenon = d._snap_tenon(d.TENON_W, d.COLLAR_LUG_T, 11.0) ^ rect(-d.TENON_W, d.TENON_W, -1.0, d.COLLAR_LUG_T + HORN_TIP)
+    side += tenon.translate((HORN_TX, d.COLLAR_Z0))
+    side -= rect(HORN_TX - 0.8, HORN_TX + 0.8, d.COLLAR_Z0 - HORN_FLEX, d.COLLAR_Z0 + 0.01)
+    plan = _rounded(rect(HORN_X[0], HORN_X[1], -HORN_T / 2, HORN_T / 2), HORN_T / 2 - 0.01)
+    plan += rect(HORN_TX - d.TENON_W, HORN_TX + d.TENON_W, -HORN_T / 2, HORN_T / 2)  # ツメの所は角を残す(角穴に合わせる)
+    horn = apply(side.extrude(HORN_T), _XZ_TO_XYZ).translate((0, -HORN_T / 2, 0)) ^ plan.extrude(60.0).translate((0, 0, d.DECK_Z1 - 1.0))
+    # 前と後ろのアーチ: 左右の角をターンテーブルの下でつなぐ。窓は 2 つで、上の角を丸める
+    arch = apply(_arch_section().extrude(HORN_T), _XZ_TO_XYZ).translate((0, -HORN_T / 2, 0))
+    for sy in (1, -1):
+        deck += arch.translate((0, sy * HORN_Y, 0))
+        for sx in (1, -1):
+            h = horn if sx > 0 else horn.mirror((1, 0, 0))
+            deck += h.translate((0, sy * HORN_Y, 0))
     return deck
+
+
+@lru_cache(maxsize=None)
+def yoke_part() -> Manifold:
+    """ヨーク。walker の形の 4 本の腕に、デッキの角のツメが下から入る角穴をあける。
+
+    ヨークはデッキの角で留まるので、側板に差すツメは削る(側板をはめるときに力がかかって耳が折れるのを防ぐ)。
+    """
+    edge = d.PLATE_IN - 0.1
+    yoke = d.yoke_part() ^ box(-edge, edge, -100.0, 100.0, -100.0, 200.0)
+    hx, hy = d.TENON_W / 2 + HORN_SLOT_FIT, HORN_T / 2 + HORN_SLOT_FIT
+    for sx in (1, -1):
+        for sy in (1, -1):
+            x, y = sx * HORN_TX, sy * HORN_Y
+            yoke -= box(x - hx, x + hx, y - hy, y + hy, d.COLLAR_Z0 - 1.0, d.COLLAR_Z0 + d.COLLAR_LUG_T + 1.0)
+    return yoke
 
 
 # ---------------------------------------------------------------- 部品表と姿勢
@@ -408,8 +521,8 @@ def part_defs() -> dict[str, PartDef]:
     defs = [
         PartDef("rail_R", "右の側板(前に補助輪)", rail_r_part, c["gray"], 1),
         PartDef("rail_L", "左の側板(後ろに補助輪)", rail_l_part, c["gray"], 1),
-        PartDef("yoke", "ヨーク(walker と同じ)", d.yoke_part, c["gray"], 1),
-        PartDef("deck", "デッキ(駆動輪の所を切り欠く)", deck_part, c["gray"], 1),
+        PartDef("yoke", "ヨーク(腕にデッキの角のツメの角穴。側板へのツメはなし)", yoke_part, c["gray"], 1),
+        PartDef("deck", "デッキ(駆動輪の所を切り欠き、ヨークを受ける角が 4 本)", deck_part, c["gray"], 1),
         PartDef("pinion", "ピニオン(左の筒を切る)", pinion_part, c["gray"], 1),
         PartDef("sleeve", "スリーブ(左右に 1 個ずつ)", sleeve_part, c["gray"], 2),
         PartDef("shaft", "六角シャフト", shaft_part, c["gray"], 1),
@@ -518,6 +631,9 @@ ENGLISH_NAMES = {
 }
 
 FIT_CHECKS = [
+    ("yoke を 0.3 mm 右へずらすとデッキの角のツメに当たる(デッキとヨークがかたまりになる)", "yoke", "deck", (0.3, 0, 0)),
+    ("yoke を 0.3 mm 前へずらすとデッキの角のツメに当たる", "yoke", "deck", (0, 0.3, 0)),
+    ("yoke を 0.4 mm 上げるとツメの返しに掛かる(上へ抜けない)", "yoke", "deck", (0, 0, 0.4)),
     # (説明, 動かす部品, 止める部品, ずらす量 [mm])
     ("lever_R を 1.2 mm 上げるとヨークの耳に当たる(頭が上へ抜けない)", "lever_R", "yoke", (0, 0, 1.2)),
     ("lever_R を 0.8 mm 前へずらすとヨークの耳に当たる", "lever_R", "yoke", (0, 0.8, 0)),
