@@ -200,36 +200,18 @@
   },
   {
    "key": "foot",
-   "label": "足の腕",
+   "label": "足の腕(足の先と一体)",
    "color": "gray",
    "count": 1,
    "size_mm": [
     93.5,
-    28.0,
-    22.2
+    29.7,
+    48.2
    ],
-   "volume_cm3": 4.61,
-   "overhang_mm2": 4.4,
-   "bed_mm2": 929.9,
-   "orientation": "内側の面を下(軸の筒と耳のピンを上へ立てる)",
-   "support": false,
-   "watertight": true,
-   "fits_bed": true
-  },
-  {
-   "key": "fork",
-   "label": "二股の足(足の腕にほぞで差す)",
-   "color": "gray",
-   "count": 1,
-   "size_mm": [
-    43.1,
-    11.7,
-    6.0
-   ],
-   "volume_cm3": 2.03,
-   "overhang_mm2": 0.0,
-   "bed_mm2": 339.2,
-   "orientation": "後ろの面を下(平らな板)",
+   "volume_cm3": 10.56,
+   "overhang_mm2": 7.3,
+   "bed_mm2": 870.2,
+   "orientation": "内側の面を下(軸の筒・足の先・耳のピンを上へ立てる)",
    "support": false,
    "watertight": true,
    "fits_bed": true
@@ -313,13 +295,12 @@
    "name": "Gray #9a9a96",
    "color": "gray",
    "support": false,
-   "parts": 5,
+   "parts": 4,
    "contents": {
     "foot": 1,
     "link": 1,
     "hinge_rod": 1,
-    "lever_R": 1,
-    "fork": 1
+    "lever_R": 1
    }
   },
   {

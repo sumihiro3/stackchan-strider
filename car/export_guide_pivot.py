@@ -30,7 +30,7 @@ SPIN_FROM, SPIN_TO, NOD_RAMP = 26, 54, 6
 # 手順の番号(ページの section の順。0 = 完成、1 = 部品)
 (S_TABLE, S_YOKE, S_AXLE, S_FRAME_LEFT, S_FRAME_RIGHT, S_AUX, S_FOOT, S_STACKCHAN, S_LEVER, S_LINK) = range(2, 12)
 AXLE_PARK = (0.0, 0.0, -75.0)  # 車軸は車体の下で組み、まとめて持ち上げる
-FOOT_PARK = (0.0, 0.0, -60.0)  # 足の腕と二股の足は車体の下で組み、まとめて持ち上げる
+FOOT_PARK = (0.0, 0.0, -60.0)  # 足の腕は車体の下から持ち上げる
 SC_HOVER = 160.0  # スタックチャンを下ろし始める高さ [mm]
 
 # 部品 → 動き [(手順, 開始, 長さ, 動く前のずれ, 動いたあとのずれ)]。ずれは組み上がった位置からの量 [mm](機体座標: X 右、Y 前、Z 上)。
@@ -68,9 +68,8 @@ MOVES: dict[str, list] = {
     "wheel_aux_L": _one(S_AUX, 0, 2, (-35, 0, 0)),
     "clip_aux_R": _one(S_AUX, 1, 2, (25, 0, 0)),
     "clip_aux_L": _one(S_AUX, 1, 2, (-25, 0, 0)),
-    # 足: 二股の足を足の腕の角穴に差し、車体の下から入れて、軸の棒を左から通す
+    # 足: 足の腕を車体の下から入れて、軸の棒を左から通す
     "foot": _under(S_FOOT, FOOT_PARK, 0.04, 0.0, 0.32),
-    "fork": _under(S_FOOT, FOOT_PARK, 0.12, -50.0, 0.32),
     "hinge_rod": [(S_FOOT, 0.6, 0.2, (-120, 0, 0), _UP)],
     "clip_hinge_L": [(S_FOOT, 0.82, 0.14, (-25, 0, 0), _UP)],
     "clip_hinge_R": [(S_FOOT, 0.82, 0.14, (25, 0, 0), _UP)],
@@ -93,7 +92,7 @@ def explode(name: str) -> list[float]:
         return [0.0, 0.0, 200.0]
     if name in ("link", "clip_in"):
         return [70.0, -40.0, 60.0]
-    if name in ("foot", "fork", "hinge_rod", "clip_hinge_R", "clip_hinge_L"):
+    if name in ("foot", "hinge_rod", "clip_hinge_R", "clip_hinge_L"):
         return [0.0, 0.0, -70.0]
     if name in ("wheel_drive_R", "sleeve_R", "wheel_aux_R", "clip_aux_R"):
         return [45.0, 0.0, 0.0]

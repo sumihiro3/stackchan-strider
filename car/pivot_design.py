@@ -92,24 +92,21 @@ HUB_TUBE_R = 5.5  # 足の腕が棒に通る筒。右の側板の内面まで伸
 ARM_IN = (-45.5, -3.0)
 # 押し板の折れ目(直進の姿勢、車の座標の (y, z))。P から後ろへ下り、ここから足の腕の耳までまっすぐ下りる
 LINK_KNEE = (ARM_IN[0], 44.5)
-# 足の腕の板(x)。ピニオンの背面(22.3)と右の駆動輪の内面(29.6)のあいだを、駆動輪のハブ(半径 9)の下でくぐる
-ARM_X = (23.0, 26.0)
-ARM_KNEE = (12.0, -16.0)  # 板の折れ目(ハブの下)
-# 二股の足(参考の台車と同じく、車体の下の真ん中で左右に分かれる)。足の腕の板に、ほぞで差して留める別の部品。
-# 右の先だけが地面を押し、左の先は右より短く、車体が左へ傾いたときの倒れ止めになる。
-# 駆動輪は横へすべりにくいので、回る中心は車軸の線の上の x = FORK_X に来る。真ん中(0)より回す力に余裕がある
-FORK_Y = -20.0  # 二股の前後の位置(ピニオンの後ろ寄りの下)
-FORK_X = 12.0  # 二股の先の |x|
-FORK_T = 6.0  # 二股の部品の厚み(y)
-FORK_BAR_Z = (-23.0, -15.0)  # 横棒の高さ。ほぞ(高さ TENON_W)より高く、肩が足の腕の内面に当たる
-FORK_MID_Z = sum(FORK_BAR_Z) / 2
-TENON_TIP = 2.0  # ほぞの返しの先の長さ。walker の形(2.8)のままでは右の駆動輪の内面に届くので短く切る
-TIP_HALF_W = 3.0
-FOOT_GAP = 3.3  # 直進のとき、右の先が地面から浮いている量。うなずき約 12° で地面に着く(ファームの旋回の角度の下限 10° の少し上)
-# 左の先を右より短くする量。足を下ろすと車体は左の駆動輪のほうへ傾き、地面が左の先に近づく(1.5 では 0.5 mm しか残らない)
-LEFT_TIP_RISE = 2.5
-TIP_R_Z = GROUND_Z + FOOT_GAP  # 右の先の下端(直進の姿勢)
-TIP_L_Z = TIP_R_Z + LEFT_TIP_RISE
+# 足の腕の板(x)。車体の真ん中を、シャフトの下でくぐる。
+# 前の形は板が x 23〜26 でピニオンの歯まで 0.7 mm、二股の足がピニオンとタイヤまで 1.5 mm しかなかった。
+# 刷った車で両方がピニオンとタイヤをこすり(赤と黒の跡)、右へ回ると途中で止まった(2026-11-25)
+ARM_X = (-3.0, 3.0)
+ARM_KNEE = (6.0, -21.0)  # 板の折れ目(シャフトの下)
+# 足の先。板から右へ出し、車軸の少し後ろで地面を押す。駆動輪は横へすべりにくいので、回る中心は車軸の線の上の x = FOOT_X[0] に来る。
+# 足を車軸に近づけるほど、回るとき足が床をすべる半径(位置のずれ)は小さくなる。
+# ただし、後ろへ倒れやすくなり、足と押し板にかかる力が増える。10 mm 後ろで折り合いを付けた(前の形は 20 mm 後ろ)。
+# 足の先を真ん中(x 0)にすると回す力の余裕が約半分になるので、右へ出す
+FOOT_X = (8.0, 11.0)  # 足の先の平らな底の x。旋回中は車体が左へ傾くので、内側の端(8)が地面を押す。外の端はピニオンの歯から 2.7 mm 離す
+FOOT_Y = -10.0
+FOOT_HALF_Y = 4.0  # 足の先の前後の幅の半分
+FOOT_RISE = 3.0  # 足の腕の板の下面が、足の先の底より高い量(地面に着くのは足の先だけ)。板から足の先までは斜めに下げ、サポートなしで刷れる
+FOOT_GAP = 3.3  # 直進のとき、足の先が地面から浮いている量。左の側板のあご(刷ってある)が、旋回の姿勢で地面から 1 mm 浮くように決める
+FOOT_Z0 = GROUND_Z + FOOT_GAP  # 足の先の底(直進の姿勢)
 FOOT_CLEAR = -FOOT_GAP  # verify 用: 直進のとき、足が地面の線より下がっている量(負の値 = 浮いている)
 
 # 前後の支えは補助輪(転がる)。右の側板の前と、左の側板の後ろに 1 個ずつ。
@@ -122,7 +119,7 @@ FOOT_CLEAR = -FOOT_GAP  # verify 用: 直進のとき、足が地面の線より
 SKID_Y = 42.0  # 倒れ止めの脚の前後の位置(側板の前の下)
 SKID_R = 4.0  # 脚の先の丸みの半径
 SKID_ROOT_Y = 10.0  # 脚の後ろの縁が側板の下の縁から出る前後の位置
-SKID_CLEAR = 1.0  # 旋回の姿勢(うなずき端)で、脚の先と地面のすきま。直進のときの浮きは skid_lift() で決まる
+SKID_LIFT = 6.6223  # 脚の先の、直進のときの地面からの浮き(2026-11-25 に刷った左の側板の値。旋回の姿勢で 1 mm 残るように決めた)
 AUX = dict(r=trike.AUX["r"], w=trike.AUX["w"], y=40.0, lift=1.0)  # 補助輪は trike と同じ部品。直進のとき地面から lift 浮く
 AUX_Z = GROUND_Z + AUX["lift"] + AUX["r"]
 AUX_CLEAR = SEAT + AUX["w"] + 0.2  # 座の面から C クリップの溝まで
@@ -200,8 +197,8 @@ def arm_angle(theta: float) -> float:
 
 
 def foot_drop(theta: float) -> float:
-    """二股の右の先(地面を押す側)が、直進の位置から下がった量 [mm]。"""
-    return TIP_R_Z - _turn((FORK_Y, TIP_R_Z), arm_angle(theta))[1]
+    """足の先の底が、直進の位置から下がった量 [mm]。"""
+    return FOOT_Z0 - _turn((FOOT_Y, FOOT_Z0), arm_angle(theta))[1]
 
 
 def steering_geometry() -> tuple[float, float]:
@@ -274,45 +271,34 @@ def rail_l_part() -> Manifold:
 
 @lru_cache(maxsize=None)
 def foot_part() -> Manifold:
-    """足の腕(車の座標、直進の姿勢)。前の軸の棒から、右の駆動輪のハブの下をくぐって後ろへ伸びる板。
+    """足の腕(車の座標、直進の姿勢)。前の軸の棒から、車体の真ん中をシャフトの下でくぐって後ろへ伸びる板。
 
-    途中に二股の足のほぞが入る角穴、後ろの端に押し板をつなぐ耳とピン。軸の筒は右の側板の内面まで伸びる。
-    筒と耳のピンを上へ立てるため、内側の面を下にして刷る。
+    途中から右へ足の先を出し、後ろの端から右へ横棒を出して、押し板をつなぐ耳とピンを付ける。軸の筒は右の側板の内面まで伸びる。
+    筒・足の先・横棒・耳のピンはどれも +x へ出るので、内側の面(x = ARM_X[0])を下にして刷る。
     """
-    hub, knee = circle(6.0, *HINGE), circle(4.0, *ARM_KNEE)
-    fork, rear = circle(6.0, FORK_Y, FORK_MID_Z), circle(4.5, *ARM_IN)
-    section = hull2(hub, knee) + hull2(knee, fork) + hull2(fork, rear)
-    half_y, half_z = FORK_T / 2 + 0.15, d.TENON_W / 2 + 0.2  # ほぞの角穴(側板のデッキの角穴と同じすきま)
-    section -= rect(FORK_Y - half_y, FORK_Y + half_y, FORK_MID_Z - half_z, FORK_MID_Z + half_z)
+    hub, knee, rear = circle(6.0, *HINGE), circle(4.0, *ARM_KNEE), circle(4.5, *ARM_IN)
+    lobe = circle(4.0, FOOT_Y, FOOT_Z0 + FOOT_RISE + 4.0)
+    section = hull2(hub, knee) + hull2(knee, lobe) + hull2(lobe, rear)
     arm = plate_yz(section, *ARM_X)
     arm += cyl_x(HUB_TUBE_R, ARM_X[1] - 0.01, d.PLATE_IN - SEAT, *HINGE)
     arm -= _bore_x(SHAFT_R + JOINT_FIT, ARM_X[0], d.PLATE_IN - SEAT, *HINGE)
+    arm += _foot_tip()
     arm += plate_yz(rear, ARM_X[1] - 0.01, LUG_X[1])
     return arm + _pin_x(LUG_X[1], SEAT + LINK_T + 0.2, *ARM_IN)
 
 
+def _foot_tip() -> Manifold:
+    """足の先。板の右の面から斜めに下がり、x = FOOT_X で平らな底になる。前後の角は丸める。"""
+    x0, top = ARM_X[1] - 0.01, FOOT_Z0 + FOOT_RISE + 8.0
+    section = polygon([(x0, FOOT_Z0 + FOOT_RISE), (FOOT_X[0], FOOT_Z0), (FOOT_X[1], FOOT_Z0), (FOOT_X[1], top), (x0, top)])
+    tip = apply(section.extrude(2 * FOOT_HALF_Y), _XZ_TO_XYZ).translate((0, FOOT_Y - FOOT_HALF_Y, 0))
+    r, inset = 3.0, FOOT_HALF_Y - 3.0
+    rounded = hull2(circle(r, FOOT_Y - inset, FOOT_Z0 + r), circle(r, FOOT_Y + inset, FOOT_Z0 + r),
+                    rect(FOOT_Y - FOOT_HALF_Y, FOOT_Y + FOOT_HALF_Y, FOOT_Z0 + r, top))
+    return tip ^ plate_yz(rounded, x0, FOOT_X[1])
+
+
 _XZ_TO_XYZ = np.array([[1.0, 0, 0, 0], [0, 0, 1.0, 0], [0, 1.0, 0, 0]])  # 断面 (x, z) を y の向きに押し出した形を、車の座標へ
-
-
-@lru_cache(maxsize=None)
-def fork_part() -> Manifold:
-    """二股の足(車の座標、直進の姿勢)。横棒の右の端のスナップほぞを足の腕の角穴に差して留める。右の先が地面を押す。
-
-    地面に押されると、横棒が角穴の上の面を押す(力は面で受ける)。ほぞの肩が腕の内面に、返しが外面に掛かって、左右にも抜けない。
-    断面が x–z の平らな板なので、y の面を下にして刷る。
-    """
-    bar_lo, bar_hi = FORK_BAR_Z
-    root = ARM_X[0] - 0.1
-    section = rect(-FORK_X - TIP_HALF_W, root, bar_lo, bar_hi)
-    for x, tip in ((FORK_X, TIP_R_Z), (-FORK_X, TIP_L_Z)):
-        section += hull2(rect(x - TIP_HALF_W, x + TIP_HALF_W, bar_lo, bar_lo + 1.0), circle(TIP_HALF_W, x, tip + TIP_HALF_W))
-    # ほぞの割りは横棒まで延ばす(ほぞだけでは短く、返しが乗り越えるときに折れる)
-    flex = 8.0
-    section -= rect(root - flex, root, FORK_MID_Z - 0.8, FORK_MID_Z + 0.8)
-    tenon_len = ARM_X[1] - ARM_X[0] + 0.2
-    tenon = d._snap_tenon(d.TENON_W, tenon_len, 4.0) ^ rect(-d.TENON_W, d.TENON_W, -1.0, tenon_len + TENON_TIP)
-    section += tenon.rotate(-90).translate((root, FORK_MID_Z))
-    return apply(section.extrude(FORK_T), _XZ_TO_XYZ).translate((0, FORK_Y - FORK_T / 2, 0))
 
 
 @lru_cache(maxsize=None)
@@ -544,8 +530,7 @@ def part_defs() -> dict[str, PartDef]:
         PartDef("wheel_aux", "補助輪(trike と同じ。右前と左後ろ)", trike.wheel_aux_part, c["black"], 2),
         PartDef("lever_R", "頭の右のレバー", lever_r_part, c["red"], 1),
         PartDef("link", "押し板", link_part, c["red"], 1),
-        PartDef("foot", "足の腕", foot_part, c["red"], 1),
-        PartDef("fork", "二股の足(足の腕にほぞで差す)", fork_part, c["red"], 1),
+        PartDef("foot", "足の腕(足の先と一体)", foot_part, c["red"], 1),
         PartDef("hinge_rod", "足の腕の軸の棒", hinge_rod_part, c["red"], 1),
         PartDef("lego_pins_R", "LEGO Technic のピン(摩擦つき、2 ポッチ。用意する)", lambda: _lego_pins(1), "#d8d8d4", 1, printable=False),
     ]
@@ -587,7 +572,6 @@ def instances(drive: float = 0.0, head_pitch: float | None = None, with_stackcha
     phi = arm_angle(head_pitch)
     swing = translation(0, *HINGE) @ rot_x(phi) @ translation(0, -HINGE[0], -HINGE[1])
     out.append(Instance("foot", "foot", swing, "lift"))
-    out.append(Instance("fork", "fork", swing, "lift"))
     # 押し板は、下の穴が足の腕の耳のピンに、上の穴が P に合うように動く
     (py0, pz0), (iy0, iz0) = _link_ends()
     (py, pz), (iy, iz) = _pin(head_pitch), _arm_in(phi)
@@ -634,14 +618,13 @@ PRINT_POSE_OVERRIDE = {
     "wheel_aux": ("X_DOWN", "外の面を下", False),
     "lever_R": ("X_UP", "頭の側の面を下(ピンを上へ立てる)", False),
     "link": ("X_UP", "寝かせる", False),
-    "foot": ("X_UP", "内側の面を下(軸の筒と耳のピンを上へ立てる)", False),
-    "fork": ("Y_DOWN", "後ろの面を下(平らな板)", False),
+    "foot": ("X_UP", "内側の面を下(軸の筒・足の先・耳のピンを上へ立てる)", False),
     "hinge_rod": ("Z_UP", "平らに削った面を下にして寝かせる", False),
 }
 ENGLISH_NAMES = {
     "rail_R": "Side rail R", "rail_L": "Side rail L", "wheel_aux": "Training wheel",
     "wheel_drive": "Drive wheel", "shaft": "Hex shaft", "sleeve": "Sleeve", "pinion": "Pinion", "deck": "Deck",
-    "lever_R": "Head lever R", "link": "Push link", "foot": "Foot arm", "fork": "Forked foot", "hinge_rod": "Foot hinge rod",
+    "lever_R": "Head lever R", "link": "Push link", "foot": "Foot arm", "hinge_rod": "Foot hinge rod",
 }
 
 FIT_CHECKS = [
@@ -656,9 +639,6 @@ FIT_CHECKS = [
     ("link を 0.5 mm 内へずらすと足の腕の耳に当たる", "link", "foot", (-0.5, 0, 0)),
     ("link を 0.6 mm 外へずらすと耳のピンの C クリップに当たる", "link", "clip_in", (0.6, 0, 0)),
     ("foot を 0.5 mm 外へずらすと軸の筒が rail_R の内面に当たる", "foot", "rail_R", (0.5, 0, 0)),
-    ("fork を 0.3 mm 上げると角穴の上の面に当たる(地面に押されても面で受ける)", "fork", "foot", (0, 0, 0.3)),
-    ("fork を 0.5 mm 外へずらすとほぞの肩が足の腕に当たる", "fork", "foot", (0.5, 0, 0)),
-    ("fork を 0.5 mm 内へずらすとほぞの返しが足の腕に掛かる", "fork", "foot", (-0.5, 0, 0)),
     ("hinge_rod を 0.5 mm 右へずらすと左の C クリップが rail_L に当たる", "hinge_rod", "clip_hinge_L", (0.5, 0, 0)),
     ("hinge_rod を 0.5 mm 左へずらすと右の C クリップが rail_R に当たる", "hinge_rod", "clip_hinge_R", (-0.5, 0, 0)),
     # 車軸が左右に動かない: ピニオン・駆動輪・スリーブが、左右の側板のあいだに並んで詰まっている
@@ -681,13 +661,12 @@ def _peak_torque_per_newton() -> float:
 
 
 # verify_car.py の力の表。足・地面を押す駆動輪の位置 (x, y) と、前後の支えの位置と浮き (x, y, 浮き)
-_FOOT = (FORK_X, FORK_Y)
+_FOOT = (FOOT_X[0], FOOT_Y)
 _AUX_X = d.PLATE_OUT + SEAT + AUX["w"] / 2
 _SUPPORTS = [(_AUX_X, AUX["y"], AUX["lift"]), (-_AUX_X, -AUX["y"], AUX["lift"])]  # 補助輪(右前、左後ろ)
 _RAIL_X = (d.PLATE_IN + d.PLATE_OUT) / 2
 _PHI_MAX = arm_angle(math.radians(NOD_RANGE[1]))
-_LOW_POINTS = [("二股の左の先", -FORK_X, FORK_Y, _turn((FORK_Y, TIP_L_Z), _PHI_MAX)[1] - GROUND_Z),
-               ("足の腕の板の下", (ARM_X[0] + ARM_X[1]) / 2, FORK_Y, _turn((FORK_Y, FORK_MID_Z - 6.0), _PHI_MAX)[1] - GROUND_Z),
+_LOW_POINTS = [("足の腕の板の下", ARM_X[0], FOOT_Y, _turn((FOOT_Y, FOOT_Z0 + FOOT_RISE), _PHI_MAX)[1] - GROUND_Z),
                ("押し板の下の端", (LINK_X[0] + LINK_X[1]) / 2, _arm_in(_PHI_MAX)[0], _arm_in(_PHI_MAX)[1] - 4.5 - GROUND_Z)]
 _WHEEL_X = DRIVE_X0 + base.TIRE_W / 2
 
@@ -704,14 +683,14 @@ def spin_ground(x: float, y: float) -> float:
 
 
 def skid_lift() -> float:
-    """倒れ止めの脚の先が、直進のとき地面から浮く量 [mm]。側板の外面の側(地面に近い側)で SKID_CLEAR 残す。"""
-    return spin_ground(-d.PLATE_OUT, SKID_Y) + SKID_CLEAR
+    """倒れ止めの脚の先が、直進のとき地面から浮く量 [mm](刷った左の側板に合わせた固定の値)。"""
+    return SKID_LIFT
 
 
 _LOW_POINTS.append(("左前の倒れ止めの脚", -d.PLATE_OUT, SKID_Y, skid_lift()))
 STATICS = dict(
     cases=[
-        dict(name="頭を上げきって右の足を下ろす(うなずき 30°)", foot=_FOOT, wheel=(-_WHEEL_X, 0.0), lifted=(_WHEEL_X, 0.0), supports=_SUPPORTS,
+        dict(name="頭を上げきって足を下ろす(うなずき 30°)", foot=_FOOT, wheel=(-_WHEEL_X, 0.0), lifted=(_WHEEL_X, 0.0), supports=_SUPPORTS,
              low_points=_LOW_POINTS),
     ],
     foot_below_ground=lambda: foot_drop(math.radians(NOD_RANGE[1])) + FOOT_CLEAR,  # 端までうなずいたとき、足が地面の線より下がる量
