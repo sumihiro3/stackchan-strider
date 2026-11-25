@@ -14,6 +14,10 @@ enum class Kind : uint8_t {
 };
 
 constexpr uint8_t BUTTON_STOP = 0x01;  // スティックを押し込んでいる
+// ボタンを押した回数の下 2 ビット(押したときだけ増える)。受け手は回数が変わったときに 1 回動く。
+// 押している間の状態ではなく回数を送るので、パケットが落ちても押しを取りこぼさず、同じ値が何回届いても 1 回しか動かない
+constexpr uint8_t PRESS_ONCE_SHIFT = 1;  // くるっと 1 回転(bit 1-2)
+constexpr uint8_t PRESS_LOOP_SHIFT = 3;  // 回り続ける・止める(bit 3-4)
 constexpr size_t PACKET_SIZE = 9;      // 'S' 'L' 版 種類 番号 x y ボタン 和
 
 struct Packet {
@@ -70,6 +74,18 @@ PairDecision decidePairRequest(bool known, bool windowOpen, int rssi, int minRss
  * コントローラーが PairAck を受け入れるか。組になったあとは受け入れない(相手を書き換えると、送る先が登録にない MAC になって途切れる)。
  */
 bool acceptPairAck(bool paired, int rssi, int minRssi);
+
+/** ボタンの回数を buttons に入れる。ほかのビット(BUTTON_STOP)はそのまま残す。 */
+uint8_t packPresses(uint8_t buttons, uint8_t onceCount, uint8_t loopCount);
+
+/** buttons から、くるっと 1 回転のボタンの回数(0〜3)を取り出す。 */
+uint8_t onceCount(uint8_t buttons);
+
+/** buttons から、回り続けるボタンの回数(0〜3)を取り出す。 */
+uint8_t loopCount(uint8_t buttons);
+
+/** 前に受けた回数 last から、いま受けた回数 now までに押された回数(0〜3)。 */
+uint8_t pressesSince(uint8_t last, uint8_t now);
 
 /** 人が見比べるための、MAC の下 2 バイト(画面に 4 桁の 16 進で出す)。 */
 uint16_t shortId(const uint8_t mac[6]);

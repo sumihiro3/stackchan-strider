@@ -14,6 +14,7 @@ namespace espnow_pad {
 namespace {
 
 constexpr uint32_t CONNECTED_MS = 500;
+constexpr uint32_t PRESS_RESET_MS = 1000;
 constexpr uint32_t PAIR_WINDOW_MS = 60000;
 constexpr uint32_t ACK_INTERVAL_MS = 300;  // 登録した相手から値が届いている間、この間隔で PairAck を返す(相手の画面の「Linked」)
 const char* const PREFS_NS = "atom";
@@ -29,6 +30,8 @@ int lastX = 0, lastY = 0;
 bool lastStop = false;
 bool fresh = false;
 uint32_t stickMs = 0;
+uint8_t lastButtons = 0;
+bool pressBaseReset = true;  // 次に受けたボタンの回数を、数え始め(押していない)とみなす
 bool pairPending = false;
 uint8_t pairFrom[6];
 int pairRssi = 0;
@@ -63,8 +66,14 @@ void onReceive(const esp_now_recv_info_t* info, const uint8_t* data, int len) {
         lastX = packet.x;
         lastY = packet.y;
         lastStop = (packet.buttons & stick_link::BUTTON_STOP) != 0;
+        lastButtons = packet.buttons;
         fresh = true;
-        stickMs = millis();
+        const uint32_t now = millis();
+        // しばらく途切れたあと(コントローラーの再起動など)は回数が 0 からやり直しになるので、数え始めに戻す
+        if (stickMs == 0 || car::timedOut(now, stickMs, PRESS_RESET_MS)) {
+            pressBaseReset = true;
+        }
+        stickMs = now;
     } else if ((packet.kind == stick_link::Kind::Pair || packet.kind == stick_link::Kind::Stick) && !pairPending) {
         // 申し込み。登録した相手(返事を取りこぼして申し込み直している)か、受け付けている間の新しい相手にだけ返事をする(update)。
         // 登録を消したあとも、Atom は前の登録のまま値(Stick)を送り続けるので、それも申し込みとして扱う
@@ -229,6 +238,27 @@ bool takeStick(int& x, int& y, bool& stop) {
     return got;
 }
 
+void takePresses(uint8_t& once, uint8_t& loop) {
+    static uint8_t base = 0;
+    portENTER_CRITICAL(&lock);
+    const uint8_t buttons = lastButtons;
+    const bool reset = pressBaseReset;
+    pressBaseReset = false;
+    const bool have = stickMs != 0;
+    portEXIT_CRITICAL(&lock);
+    once = loop = 0;
+    if (!have) {
+        return;
+    }
+    if (reset) {
+        base = buttons;
+        return;
+    }
+    once = stick_link::pressesSince(stick_link::onceCount(base), stick_link::onceCount(buttons));
+    loop = stick_link::pressesSince(stick_link::loopCount(base), stick_link::loopCount(buttons));
+    base = buttons;
+}
+
 uint32_t lastStickMs() {
     portENTER_CRITICAL(&lock);
     const uint32_t ms = stickMs;
@@ -247,6 +277,7 @@ void forget() {
     std::memcpy(old, peer, sizeof(old));
     hasPeer = false;
     stickMs = 0;
+    pressBaseReset = true;
     portEXIT_CRITICAL(&lock);
     if (had && started) {
         esp_now_del_peer(old);  // Wi-Fi の内部のロックを取るので、割り込みを止めた中では呼ばない

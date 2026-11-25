@@ -56,6 +56,11 @@ details .card{margin-top:10px}
   <div class="knob" id="knob"></div>
 </div>
 <p class="note" style="text-align:center">指でつまみを動かします。上下で進む・下がる(倒すほど速い)。左右に大きく倒すと、頭を上げてその場で回ります。離すと止まります。</p>
+<div class="row">
+  <button class="go" id="once">くるっと 1 回転</button>
+  <button id="loop">回り続ける</button>
+</div>
+<p class="note" style="text-align:center" id="move-note">「いくよ」のあと回ります。回り続けるのは、もう一度押す・つまみを動かす・頭をさわる・30 秒たつ、のどれかで止まります。</p>
 <div class="grow"></div>
 <details>
   <summary>設定</summary>
@@ -70,6 +75,8 @@ details .card{margin-top:10px}
     <p class="note">つまみを上へ動かして後ろへ進む場合にチェックします。</p>
     <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="rev">回る向きを入れ替える</label>
     <p class="note">つまみを右へ倒して左へ回る場合にチェックします。本体に保存されます。</p>
+    <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="bleft">ボタンで回るときは左へ回る</label>
+    <p class="note">「くるっと 1 回転」「回り続ける」と StopWatch のボタンで回る向きです(初めは右)。本体に保存されます。</p>
     <label style="flex-direction:row;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="smile">走っている間は笑顔にする</label>
     <button id="atom-forget">StopWatch を登録し直す</button>
     <p class="note">押してから 60 秒の間に、近く(3 m 以内)に置いた StopWatch を、本体の画面で確かめて新しく登録します。</p>
@@ -86,11 +93,17 @@ function show(s) {
   $("invert").checked = !!s.invert;
   $("smile").checked = !!s.smile;
   $("rev").checked = !!s.rev;
+  $("bleft").checked = !!s.bleft;
+  const spinning = s.move === 1 || s.move === 2;
+  $("loop").textContent = spinning && s.loop ? "止める" : "回り続ける";
+  $("loop").setAttribute("aria-pressed", spinning && s.loop ? "true" : "false");
+  $("once").disabled = spinning && !s.loop;
   spin10 = Math.round(s.spin * 10);
   vmax = s.vmax;
   $("spin-out").textContent = s.spin.toFixed(0) + "°";
   $("vmax-out").textContent = s.vmax + "%";
-  const moving = s.drive ? (s.drive > 0 ? "前進中" : "後退中") : "停止中";
+  const MOVES = ["", "いくよ…", "回っています " + Math.round(s.turned) + "°", "目が回った"];
+  const moving = MOVES[s.move] || (s.drive ? (s.drive > 0 ? "前進中" : "後退中") : "停止中");
   $("state").textContent = moving + " / 頭 " + s.pitch.toFixed(1) + "° / 電池 " + s.volt.toFixed(2) + " V";
   $("atom").textContent = "StopWatch: " + (ATOM_STATES[s.atom] || "-");
   busy = !!s.atomBusy;
@@ -153,6 +166,12 @@ $("spin-u").onclick = () => tune("spin10=" + (spin10 + 10));
 $("vmax-d").onclick = () => tune("vmax=" + (vmax - 10));
 $("vmax-u").onclick = () => tune("vmax=" + (vmax + 10));
 $("rev").onchange = () => tune("rev=" + ($("rev").checked ? 1 : 0));
+const spin = (query) => call("/api/spin?" + query).then(show).catch(lost);
+$("once").onclick = () => spin("m=once");
+$("loop").onclick = () => spin("m=loop");
+$("bleft").onchange = () => spin("left=" + ($("bleft").checked ? 1 : 0));
+// 回っている間は、状態をこまめに読み直す(ボタンの表示と、回った角度のため)
+setInterval(() => { if (!held && !document.hidden && /いくよ|回っています|目が回った/.test($("state").textContent)) call("/api/state").then(show).catch(lost); }, 300);
 $("invert").onchange = () => call("/api/invert?on=" + ($("invert").checked ? 1 : 0)).then(show).catch(lost);
 $("smile").onchange = () => call("/api/smile?on=" + ($("smile").checked ? 1 : 0)).then(show).catch(lost);
 $("atom-forget").onclick = () => call("/api/atom/forget").then((s) => { show(s); $("atom").textContent = "StopWatch: 登録を消しました。60 秒の間に、近く(3 m 以内)に置いた StopWatch を登録します"; }).catch(lost);

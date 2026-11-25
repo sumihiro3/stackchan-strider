@@ -70,6 +70,17 @@ PairDecision decidePairRequest(bool known, bool windowOpen, int rssi, int minRss
 
 bool acceptPairAck(bool paired, int rssi, int minRssi) { return !paired && rssi >= minRssi; }
 
+uint8_t packPresses(uint8_t buttons, uint8_t onceCount, uint8_t loopCount) {
+    const uint8_t mask = static_cast<uint8_t>(0x3 << PRESS_ONCE_SHIFT | 0x3 << PRESS_LOOP_SHIFT);
+    return static_cast<uint8_t>((buttons & ~mask) | (onceCount & 0x3) << PRESS_ONCE_SHIFT | (loopCount & 0x3) << PRESS_LOOP_SHIFT);
+}
+
+uint8_t onceCount(uint8_t buttons) { return static_cast<uint8_t>(buttons >> PRESS_ONCE_SHIFT & 0x3); }
+
+uint8_t loopCount(uint8_t buttons) { return static_cast<uint8_t>(buttons >> PRESS_LOOP_SHIFT & 0x3); }
+
+uint8_t pressesSince(uint8_t last, uint8_t now) { return static_cast<uint8_t>((now - last) & 0x3); }
+
 uint16_t shortId(const uint8_t mac[6]) { return static_cast<uint16_t>(mac[4] << 8 | mac[5]); }
 
 }  // namespace stick_link
